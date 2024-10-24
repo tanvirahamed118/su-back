@@ -642,12 +642,16 @@ async function updateOfferRequest(req, res) {
           rejectUpdateData,
           { new: true }
         );
+        const allrejectJobData = {
+          rejectBid: rejectBid > 0 ? placeBid - 1 + rejectBid : placeBid - 1,
+          placeBid: 1,
+        };
 
         // Update offer status to rejected
         await OfferModel.findByIdAndUpdate(offer._id, rejectData, {
           new: true,
         });
-        await JobModel.findByIdAndUpdate(offer.jobId, rejectJobData, {
+        await JobModel.findByIdAndUpdate(offer.jobId, allrejectJobData, {
           new: true,
         });
       }
