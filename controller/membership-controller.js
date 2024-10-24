@@ -68,7 +68,7 @@ const cancelMembership = async (req, res) => {
     if (existSeller) {
       const updateSeller = {
         memberShip: {},
-        memberShipStatus: "not-available",
+        memberShipStatus: "not-complete",
         credits: 0,
       };
       await SellerModel.findByIdAndUpdate(id, updateSeller, {

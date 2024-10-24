@@ -8,6 +8,9 @@ const EMAIL = process.env.EMAIL;
 const PASSWORD = process.env.PASSWORD;
 const nodemailer = require("nodemailer");
 const Mailgen = require("mailgen");
+const supportMail = process.env.SUPPORT_MAIL;
+const supportPhone = process.env.SUPPORT_PHONE;
+const corsUrl = process.env.CORS_URL;
 
 // Get All Admin
 async function getAdmin(req, res) {
@@ -203,7 +206,13 @@ async function otpSend(req, res) {
               },
             ],
           },
-          outro: "Thank You",
+          outro: `
+        <p style="font-size: 14px; color: #777;">Please check your email, you have receive OTP code</p>
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
+      `,
         },
       };
       let mail = await mailGenarator.generate(response);

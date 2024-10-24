@@ -11,6 +11,9 @@ const SECRET_KEY = process.env.SECRET_KEY;
 const nodemailer = require("nodemailer");
 const Mailgen = require("mailgen");
 const jwt = require("jsonwebtoken");
+const supportMail = process.env.SUPPORT_MAIL;
+const supportPhone = process.env.SUPPORT_PHONE;
+const corsUrl = process.env.CORS_URL;
 
 // Get All Client
 async function getClient(req, res) {
@@ -168,15 +171,15 @@ async function sendVerificationCode(companyName, email) {
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
-      name: `Suisse-Offerten GmbH`,
-      link: "https://suisseoffertengmbh.com",
+      name: `Suisse-Offerten`,
+      link: "http://suisse-offerten.ch/",
     },
   });
 
   const emailTemplate = {
     body: {
       name: `${companyName}`,
-      intro: `Welcome to Suisse-Offerten GmbH! Please use the following verification code to verify your email address:`,
+      intro: `Welcome to Suisse-Offerten! Please use the following verification code to verify your email address:`,
       table: {
         data: [
           {
@@ -184,8 +187,13 @@ async function sendVerificationCode(companyName, email) {
           },
         ],
       },
-      outro:
-        "If you did not sign up for this account, you can ignore this email.",
+      outro: `
+        <p style="font-size: 14px; color: #777;">Please check your email, you have receive verification code</p>
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
+      `,
     },
   };
 
@@ -211,9 +219,19 @@ async function VerifyCodeCheck(req, res) {
     if (data) {
       const existClient = await ClientModel.findOne({ email: email });
       const existJob = await JobModel.findOne({ jobEmail: email });
+
+      const matchingSellers = await SellerModel.find({
+        $and: [
+          { preference: { $in: existJob?.jobCity } },
+          { activities: { $in: existJob?.jobSubCategories } },
+        ],
+      });
       if (existClient?.status === "verified") {
         return res.status(500).json({ message: "Already verified" });
       }
+
+      const sellerEmails = matchingSellers.map((seller) => seller.email);
+      const sellerNames = matchingSellers.map((seller) => seller.username);
       const updateClient = {
         status: "verified",
       };
@@ -223,12 +241,94 @@ async function VerifyCodeCheck(req, res) {
       const id = existClient?._id;
       await ClientModel.findByIdAndUpdate(id, updateClient, { new: true });
       await JobModel.findByIdAndUpdate(existJob?._id, updateJob, { new: true });
+      if (existJob) {
+        await sendJobEmails(
+          sellerEmails,
+          existJob?.jobTitle,
+          existJob?.jobDescription,
+          existJob?.jobLocation,
+          existJob?.jobNumber,
+          sellerNames
+        );
+      }
       res.status(200).json({ message: "verification successful" });
     } else {
       res.status(500).json({ message: "Enter wrong code!" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ error: error });
+  }
+}
+
+// send email to all seller after client verify their email
+async function sendJobEmails(
+  sellerEmails,
+  jobTitle,
+  jobDescription,
+  jobLocation,
+  uniqueNumber,
+  sellerNames
+) {
+  const transporter = nodemailer.createTransport({
+    service: "gmail", // or any SMTP service provider
+    auth: {
+      user: EMAIL,
+      pass: PASSWORD,
+    },
+  });
+
+  const mailGenerator = new Mailgen({
+    theme: "default",
+    product: {
+      name: "Suiess-offerten",
+      link: "http://suisse-offerten.ch/",
+    },
+  });
+
+  // Loop through both emails and names
+  for (let i = 0; i < sellerNames.length; i++) {
+    const emailTemplate = {
+      body: {
+        name: sellerNames[i], // Personalize email with seller's username
+        intro: `A new job has been posted: ${jobTitle}`,
+
+        outro: `
+        <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
+          <strong style="font-size: 16px;">Job Title:</strong>
+          <p style="font-size: 14px; color: #555;">${jobTitle}</p>
+        </div>
+        <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
+          <strong style="font-size: 16px;">Job Description:</strong>
+          <p style="font-size: 14px; color: #555;">${jobDescription}</p>
+        </div>
+        <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
+          <strong style="font-size: 16px;">Job Location:</strong>
+          <p style="font-size: 14px; color: #555;">${jobLocation}</p>
+        </div>
+        <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
+          <strong style="font-size: 16px;">Job Number:</strong>
+          <p style="font-size: 14px; color: #555;">${uniqueNumber}</p>
+        </div>
+        <p style="font-size: 14px; color: #777;">Visit this link to see recent jobs <a href="${corsUrl}/search-job">See jobs</a></p>
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
+      `,
+      },
+    };
+
+    const emailBody = mailGenerator.generate(emailTemplate);
+
+    const message = {
+      from: EMAIL,
+      to: sellerEmails[i], // Send email to the current seller
+      subject: `New Job Posted: ${jobTitle}`,
+      html: emailBody,
+    };
+
+    // Send the email
+    await transporter.sendMail(message);
   }
 }
 
@@ -323,8 +423,8 @@ async function otpSend(req, res) {
       let mailGenarator = new Mailgen({
         theme: "default",
         product: {
-          name: "name",
-          link: "https://name.com",
+          name: "suisse-offerten",
+          link: "http://suisse-offerten.ch/",
         },
       });
       let response = {
@@ -338,7 +438,11 @@ async function otpSend(req, res) {
               },
             ],
           },
-          outro: "Thank You",
+          outro: `<p style="font-size: 14px; color: #777;">Please check your email, you have receive OTP code</p>
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>`,
         },
       };
       let mail = await mailGenarator.generate(response);

@@ -10,14 +10,70 @@ const offerSchema = mongoose.Schema(
     jobId: {
       type: String,
     },
-    message: {
+    offerPrice: {
+      type: String,
+    },
+    priceUnit: {
+      type: String,
+    },
+    offerNote: {
+      type: String,
+    },
+    offerFiles: {
+      type: String,
+    },
+    bidMessage: {
+      type: String,
+    },
+    offerMessage: {
       type: String,
     },
     perticipationId: {
       type: String,
     },
-    jobTitle: {
+    status: {
       type: String,
+    },
+    reviewRequest: {
+      type: Boolean,
+    },
+    view: {
+      type: String,
+    },
+    requestView: {
+      type: String,
+    },
+    offerRequested: {
+      type: Boolean,
+      default: false,
+    },
+    offerRequestedNotify: {
+      type: Boolean,
+      default: false,
+    },
+    offerRejected: {
+      type: Boolean,
+      default: false,
+    },
+    offerPlaced: {
+      type: Boolean,
+      default: false,
+    },
+    offerPlacedNotify: {
+      type: Boolean,
+      default: false,
+    },
+    offerAccepted: {
+      type: Boolean,
+      default: false,
+    },
+    offerArchived: {
+      type: Boolean,
+      default: false,
+    },
+    reviewSubmited: {
+      type: String,
+      default: "pending",
     },
   },
   { timestamps: true }

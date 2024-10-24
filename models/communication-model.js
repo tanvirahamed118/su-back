@@ -26,6 +26,10 @@ const communicationSchema = mongoose.Schema(
     view: {
       type: String,
     },
+    offerRequest: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

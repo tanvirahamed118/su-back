@@ -10,6 +10,9 @@ const baseURL = process.env.CORS_URL;
 const nodemailer = require("nodemailer");
 const Mailgen = require("mailgen");
 const jwt = require("jsonwebtoken");
+const supportMail = process.env.SUPPORT_MAIL;
+const supportPhone = process.env.SUPPORT_PHONE;
+const corsUrl = process.env.CORS_URL;
 
 // Get All Seller
 async function getSeller(req, res) {
@@ -150,11 +153,10 @@ async function sendVerificationEmail(companyName, email, token) {
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
-      name: `Suisse-Offerten GmbH`,
-      link: "https://suisseoffertengmbh.com",
+      name: `Suisse-Offerten`,
+      link: "http://suisse-offerten.ch/",
     },
   });
-
   const emailTemplate = {
     body: {
       name: `${companyName}`,
@@ -167,20 +169,20 @@ async function sendVerificationEmail(companyName, email, token) {
           link: `${baseURL}/verify-email/${token}`,
         },
       },
-      outro:
-        "If you did not sign up for this account, you can ignore this email.",
+      outro: `<p style="font-size: 14px; color: #777;">Please login to your account to check your verification process.</p>
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>`,
     },
   };
-
   const emailBody = mailGenerator.generate(emailTemplate);
-
   const mailOptions = {
     from: EMAIL,
     to: email,
     subject: "Email Verification",
     html: emailBody,
   };
-
   await transporter.sendMail(mailOptions);
 }
 
@@ -298,8 +300,8 @@ async function otpSend(req, res) {
       let mailGenarator = new Mailgen({
         theme: "default",
         product: {
-          name: "name",
-          link: "https://name.com",
+          name: "Suisse-Offerten",
+          link: "http://suisse-offerten.ch/",
         },
       });
       let response = {
@@ -313,7 +315,11 @@ async function otpSend(req, res) {
               },
             ],
           },
-          outro: "Thank You",
+          outro: `<p style="font-size: 14px; color: #777;">Please check your email, you have receive OTP code</p>
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>`,
         },
       };
       let mail = await mailGenarator.generate(response);
@@ -423,7 +429,6 @@ async function updateSeller(req, res) {
           secondPhone,
           newsletter,
           password: hash,
-          memberShip: { status: "pending" },
         };
         await SellerModel.findByIdAndUpdate(id, updateSeller, {
           new: true,
@@ -491,6 +496,12 @@ async function updateSellerStatusByAdmin(req, res) {
           await SellerModel.findByIdAndUpdate(id, uidVerify, {
             new: true,
           });
+          await sendEmailNotification(
+            existSeller.username,
+            existSeller.email,
+            `You have received a new notification from Suisse-Offerten Support Team`,
+            `UID`
+          );
         } else {
           const uidVerify = {
             uidVerify: false,
@@ -510,6 +521,12 @@ async function updateSellerStatusByAdmin(req, res) {
             await SellerModel.findByIdAndUpdate(id, addressVerify, {
               new: true,
             });
+            await sendEmailNotification(
+              existSeller.username,
+              existSeller.email,
+              `You have received a new notification from Suisse-Offerten Support Team`,
+              `Address`
+            );
           } else {
             const addressVerify = {
               locationVerify: false,
@@ -531,6 +548,50 @@ async function updateSellerStatusByAdmin(req, res) {
   } catch (error) {
     res.status(500).json({ message: "Update Failed", error: error });
   }
+}
+
+// send notification email
+async function sendEmailNotification(name, email, subject, verify) {
+  const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+      user: EMAIL,
+      pass: PASSWORD,
+    },
+  });
+
+  const mailGenerator = new Mailgen({
+    theme: "default",
+    product: {
+      name: "Suisse-Offerten",
+      link: "https://suisse-offerten.ch",
+    },
+  });
+  const emailTemplate = {
+    body: {
+      name: `${name}`,
+      intro: `Good News...`,
+      outro: `
+        <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
+          <strong style="font-size: 16px;">Message:</strong>
+          <p style="font-size: 14px; color: #555;">Your ${verify} is verified.</p>
+        </div>
+        <p style="font-size: 14px; color: #777;">Please login to your account to check your verification process.</p>
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
+      `,
+    },
+  };
+  const emailBody = mailGenerator.generate(emailTemplate);
+  const mailOptions = {
+    from: EMAIL,
+    to: email,
+    subject: subject,
+    html: emailBody,
+  };
+  await transporter.sendMail(mailOptions);
 }
 
 // update seller company info
@@ -641,6 +702,52 @@ async function createSellerByAdmin(req, res) {
   }
 }
 
+// Delete company pictures
+async function deleteSellerCompanyPictures(req, res) {
+  const { item } = req.body;
+  const { id } = req.params;
+  try {
+    const existSeller = await SellerModel.findOne({ _id: id });
+    if (existSeller) {
+      const updateSeller = await SellerModel.findByIdAndUpdate(
+        id,
+        { $pull: { companyPictures: item } },
+        { new: true }
+      );
+      res
+        .status(200)
+        .json({ message: "Delete Successful", updatedSeller: updateSeller });
+    } else {
+      res.status(400).json({ message: "Data Not Found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Delete Failed", error: error.message });
+  }
+}
+
+// Upload seller address
+async function uploadSellerAddress(req, res) {
+  const { postalCode, streetNo, location } = req.body;
+  const { id } = req.params;
+  try {
+    const existSeller = await SellerModel.findOne({ _id: id });
+    if (existSeller) {
+      const updateData = {
+        postalCode,
+        streetNo,
+        location,
+        addressFile: req.file.location,
+      };
+      await SellerModel.findByIdAndUpdate(id, updateData, { new: true });
+      res.status(200).json({ message: "Submit Successful" });
+    } else {
+      res.status(400).json({ message: "Data Not Found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Submit Failed", error: error.message });
+  }
+}
+
 module.exports = {
   getSeller,
   getOneSeller,
@@ -658,4 +765,6 @@ module.exports = {
   getAllSellersByAdmin,
   updateSellerStatusByAdmin,
   createSellerByAdmin,
+  deleteSellerCompanyPictures,
+  uploadSellerAddress,
 };

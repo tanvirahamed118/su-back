@@ -3,6 +3,7 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const auth = require("./middlewares/auth");
+const closeJob = require("./middlewares/closeJob");
 const clientRouter = require("./routes/client-router");
 const sellerRouter = require("./routes/seller.router");
 const jobRouter = require("./routes/job-router");
@@ -22,6 +23,7 @@ const categoryRouter = require("./routes/category-router");
 const CORS_URL = process.env.CORS_URL;
 const DASHBOARD_URL = process.env.DASHBOARD_URL;
 const allowedOrigins = [CORS_URL, DASHBOARD_URL];
+const cron = require("node-cron");
 
 // App Use Middlewares
 app.use(express.json({ limit: "50mb" }));
@@ -39,6 +41,10 @@ app.use(
     credentials: true,
   })
 );
+
+cron.schedule("0 0 * * *", () => {
+  closeJob();
+});
 
 // All Routes
 app.use("/auth/client", clientRouter);

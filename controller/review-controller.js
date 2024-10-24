@@ -2,10 +2,14 @@ const ReviewModel = require("../models/review-model");
 const SellerModel = require("../models/seller-model");
 const JobModel = require("../models/job-model");
 const ProposalModel = require("../models/proposal-model");
+const OfferModel = require("../models/offer-model");
 const nodemailer = require("nodemailer");
 const Mailgen = require("mailgen");
 const EMAIL = process.env.EMAIL;
 const PASSWORD = process.env.PASSWORD;
+const supportMail = process.env.SUPPORT_MAIL;
+const supportPhone = process.env.SUPPORT_PHONE;
+const corsUrl = process.env.CORS_URL;
 
 // get all reviews default
 const getAllReviewsDefault = async (req, res) => {
@@ -106,7 +110,8 @@ const getsingleReview = async (req, res) => {
 
 // create review
 const createReview = async (req, res) => {
-  const { clinetName, review, rating, jobId, sellerId, clientId } = req.body;
+  const { clinetName, review, rating, jobId, sellerId, clientId, offerId } =
+    req.body;
   const existJob = await JobModel.findOne({ _id: jobId });
   const existSeller = await SellerModel.findOne({ _id: sellerId });
 
@@ -138,7 +143,7 @@ const createReview = async (req, res) => {
     ).length;
     const totalRating = totalReviews > 0 ? sumOfRating / totalReviews : 0;
     const percentageRating = totalReviews > 0 ? (totalRating / 5) * 100 : 0;
-    const existProposal = await ProposalModel.findOne({ jobId, sellerId });
+
     const updateSeller = {
       reviewRating: totalRating,
       totalReview: totalReviews,
@@ -152,11 +157,11 @@ const createReview = async (req, res) => {
       clinetName
     );
     const updateStatus = {
-      status: "close",
+      reviewSubmited: "complete",
     };
-    const id = existProposal?._id;
+
     await SellerModel.findByIdAndUpdate(sellerId, updateSeller, { new: true });
-    await ProposalModel.findByIdAndUpdate(id, updateStatus, { new: true });
+    await OfferModel.findByIdAndUpdate(offerId, updateStatus, { new: true });
     res.status(200).json({ message: "Review submited" });
   } catch (error) {
     res
@@ -180,46 +185,39 @@ async function sendEmailNotification(
       pass: PASSWORD,
     },
   });
-
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
-      name: "Suisse-Offerten GmbH",
-      link: "https://suisseoffertengmbh.com", // Your company's website
+      name: "Suisse-Offerten",
+      link: "http://suisse-offerten.ch/",
     },
   });
 
   const emailTemplate = {
     body: {
-      name: `${name}`, // Recipient's name
-      intro: `You have received a new message from ${receiveName}:`, // Introduction
+      name: `${name}`,
+      intro: `You have received a new message from ${receiveName}:`,
       outro: `
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
           <strong style="font-size: 16px;">Message:</strong>
           <p style="font-size: 14px; color: #555;">${message}</p>
         </div>
         <p style="font-size: 14px; color: #777;">Please login to your account to see your new reviews.</p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten GmbH</p>
-        <p style="font-size: 14px; color: #4285F4;">Suisse-Offerten GmbH Team</p>
-        <p style="font-size: 14px; color: #4285F4;">www.suisseoffertenGmbH.com</p>
-        <p style="font-size: 14px; color: #777;">Tel: 04444444</p>
-      `, // Styled outro message
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
+      `,
     },
   };
-
-  // Manually inject the message as a key and value
   emailTemplate.body.message = `${message}`;
-
   const emailBody = mailGenerator.generate(emailTemplate);
-
   const mailOptions = {
-    from: EMAIL, // Sender's email address
-    to: email, // Recipient's email address
-    subject: subject, // Email subject
-    html: emailBody, // HTML content for the email
+    from: EMAIL,
+    to: email,
+    subject: subject,
+    html: emailBody,
   };
-
-  // Send the email
   await transporter.sendMail(mailOptions);
 }
 

@@ -1,6 +1,7 @@
 const JobModel = require("../models/job-model");
 const PerticipationModel = require("../models/perticipation-model");
 const SellerModel = require("../models/seller-model");
+const ProposalModel = require("../models/proposal-model");
 
 // get all Perticipation
 const getAllPerticipationById = async (req, res) => {
@@ -21,9 +22,49 @@ async function getAllPerticipation(req, res) {
     const limitNumber = parseInt(limit, 10);
     const skip = (pageNumber - 1) * limitNumber;
     const filter = {};
-
     if (id) {
       filter.jobId = id;
+    }
+    const participations = await PerticipationModel.find(filter)
+      .skip(skip)
+      .limit(limitNumber);
+
+    const totalParticipations = await PerticipationModel.countDocuments(filter);
+    const totalPages = Math.ceil(totalParticipations / limitNumber);
+    const sellerIds = [...new Set(participations.map((p) => p.sellerId))];
+    const sellers = await SellerModel.find({ _id: { $in: sellerIds } });
+    const sellerDataMap = sellers.reduce((map, seller) => {
+      map[seller._id.toString()] = seller;
+      return map;
+    }, {});
+
+    const detailedParticipations = participations.map((participation) => ({
+      ...participation._doc,
+      sellerData: sellerDataMap[participation.sellerId.toString()] || null,
+    }));
+
+    res.status(200).json({
+      currentPage: pageNumber,
+      totalPages,
+      totalParticipations,
+      participations: detailedParticipations,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+// get all perticipations
+async function getAllPerticipationBySeller(req, res) {
+  try {
+    const { page = 1, limit = 20, id } = req.query;
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    const skip = (pageNumber - 1) * limitNumber;
+    const filter = {};
+
+    if (id) {
+      filter.sellerId = id;
     }
     const participations = await PerticipationModel.find(filter)
       .skip(skip)
@@ -126,9 +167,49 @@ const updatePerticipationStatus = async (req, res) => {
   }
 };
 
+// update perticipation status by seller
+const updatePerticipationStatusBySeller = async (req, res) => {
+  const { status, jobId } = req.body;
+  const { id } = req.params;
+  const existJob = await JobModel.findOne({ _id: jobId });
+  const existPerticipation = await PerticipationModel.findOne({ _id: id });
+  const existProposal = await ProposalModel.findOne({
+    jobId: jobId,
+    sellerId: existPerticipation?.sellerId,
+  });
+  const { placeBid } = existJob || {};
+  const statusData = { status: status };
+  try {
+    const archivedJob = {
+      placeBid: placeBid >= 1 ? placeBid - 1 : 0,
+      offerRequest: placeBid >= 1 ? placeBid - 1 : 0,
+    };
+    await JobModel.findByIdAndUpdate(jobId, archivedJob, {
+      new: true,
+    });
+    await PerticipationModel.findByIdAndUpdate(id, statusData, {
+      new: true,
+    });
+    if (existProposal) {
+      const proposalId = existProposal?._id;
+      const archivedProposal = {
+        status: "archived",
+      };
+      await ProposalModel.findByIdAndUpdate(proposalId, archivedProposal, {
+        new: true,
+      });
+    }
+    res.status(200).json({ message: "Request Archived" });
+  } catch (error) {
+    res.status(500).json({ error: error, message: "Update Faild!" });
+  }
+};
+
 module.exports = {
   getAllPerticipation,
   createPerticipation,
   getAllPerticipationById,
   updatePerticipationStatus,
+  getAllPerticipationBySeller,
+  updatePerticipationStatusBySeller,
 };

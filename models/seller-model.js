@@ -148,6 +148,9 @@ const sellerSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
+    addressFile: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

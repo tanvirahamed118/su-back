@@ -10,6 +10,15 @@ const perticipationSchema = mongoose.Schema(
     sellerId: {
       type: String,
     },
+    jobTitle: {
+      type: String,
+    },
+    jobNumber: {
+      type: String,
+    },
+    jobLocation: {
+      type: String,
+    },
     status: {
       type: String,
       default: "progress",

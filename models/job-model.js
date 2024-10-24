@@ -70,6 +70,9 @@ const jobSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
+    credits: {
+      type: Number,
+    },
   },
   { timestamps: true }
 );

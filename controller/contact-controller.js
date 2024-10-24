@@ -3,6 +3,9 @@ const EMAIL = process.env.EMAIL;
 const PASSWORD = process.env.PASSWORD;
 const nodemailer = require("nodemailer");
 const Mailgen = require("mailgen");
+const supportMail = process.env.SUPPORT_MAIL;
+const supportPhone = process.env.SUPPORT_PHONE;
+const corsUrl = process.env.CORS_URL;
 
 // Get All contact
 async function getAllContact(req, res) {
@@ -82,8 +85,8 @@ async function createContact(req, res) {
     let mailGenarator = new Mailgen({
       theme: "default",
       product: {
-        name: "SUISSE-OFFERTEN",
-        link: "https://suisse-offerten.com",
+        name: "Suiess-offerten",
+        link: "http://suisse-offerten.ch/",
       },
     });
 
@@ -117,10 +120,10 @@ async function createContact(req, res) {
           <p style="font-size: 14px; color: #555;">${notice}</p>
         </div>
         <p style="font-size: 14px; color: #777;">Thanks for make a request, we will contact you shortly.</p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten GmbH</p>
-        <p style="font-size: 14px; color: #4285F4;">Suisse-Offerten GmbH Team</p>
-        <p style="font-size: 14px; color: #4285F4;">www.suisseoffertenGmbH.com</p>
-        <p style="font-size: 14px; color: #777;">Tel: 04444444</p>
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
       `,
       },
     };
