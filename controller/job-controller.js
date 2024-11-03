@@ -2,6 +2,7 @@ const JobModel = require("../models/job-model");
 const ClientModel = require("../models/client-model");
 const SellerModel = require("../models/seller-model");
 const VerifyModel = require("../models/verify-model");
+const WishlistModel = require("../models/wishlist-model");
 const EMAIL = process.env.EMAIL;
 const PASSWORD = process.env.PASSWORD;
 const nodemailer = require("nodemailer");
@@ -628,6 +629,7 @@ async function deleteJob(req, res) {
   try {
     if (existEvent) {
       await JobModel.findByIdAndDelete(id);
+      await WishlistModel.deleteMany({ jobId: id });
       res.status(200).json({ message: "Delete Successful" });
     } else {
       res.status(400).json({ message: "Data Not Found!" });

@@ -73,9 +73,7 @@ const sellerSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    newsletter: {
-      type: Boolean,
-    },
+
     status: {
       type: String,
       default: "pending",

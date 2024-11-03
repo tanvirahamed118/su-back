@@ -33,9 +33,6 @@ const clientSchema = mongoose.Schema(
     agreement: {
       type: Boolean,
     },
-    newsletter: {
-      type: Boolean,
-    },
     status: {
       type: String,
       default: "pending",

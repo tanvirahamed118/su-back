@@ -84,7 +84,7 @@ async function register(req, res) {
     phone,
     furtherInfo,
     username,
-    newsletter,
+
     referance,
     password,
     agreement,
@@ -119,7 +119,6 @@ async function register(req, res) {
         phone,
         furtherInfo,
         username,
-        newsletter,
         referance,
         agreement,
         password: hash,
@@ -401,7 +400,6 @@ async function updateSeller(req, res) {
     phone,
     secondPhone,
     password,
-    newsletter,
   } = req.body;
 
   const id = req.params.id;
@@ -427,7 +425,6 @@ async function updateSeller(req, res) {
           location,
           phone,
           secondPhone,
-          newsletter,
           password: hash,
         };
         await SellerModel.findByIdAndUpdate(id, updateSeller, {

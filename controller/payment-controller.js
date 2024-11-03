@@ -6,11 +6,18 @@ const spaceId = process.env.SPACEID;
 const apiSecret = process.env.API_SECRET;
 const baseURL = process.env.CORS_URL;
 const userId = process.env.USER_ID;
+const nodemailer = require("nodemailer");
+const Mailgen = require("mailgen");
+const EMAIL = process.env.EMAIL;
+const PASSWORD = process.env.PASSWORD;
 let config = {
   space_id: Number(spaceId),
   user_id: Number(userId),
   api_secret: apiSecret,
 };
+const supportMail = process.env.SUPPORT_MAIL;
+const supportPhone = process.env.SUPPORT_PHONE;
+const corsUrl = process.env.CORS_URL;
 
 // generate uniqe id
 function generateUniqueId() {
@@ -96,12 +103,6 @@ async function createMembershipPayment(req, res) {
         cost: currentPrice,
         status: "pending",
       });
-      const membershipComplete = {
-        memberShip: item,
-      };
-      await SellerModel.findByIdAndUpdate(id, membershipComplete, {
-        new: true,
-      });
 
       let pageUrl = paymentPageResponse.body;
       return res.status(200).json({ pageUrl: pageUrl });
@@ -115,13 +116,7 @@ async function createMembershipPayment(req, res) {
 async function createCreditsPayment(req, res) {
   const { id, credit, price, sellerId } = req.body;
   const item = req.body;
-  const existSeller = await SellerModel.findOne({ _id: sellerId });
 
-  if (!existSeller.memberShip) {
-    return res
-      .status(400)
-      .json({ message: "You are not eligible to purchase credit!" });
-  }
   try {
     let transactionService = new Wallee.api.TransactionService(config);
     let transactionPaymentPageService =
@@ -166,6 +161,7 @@ async function createCreditsPayment(req, res) {
     };
 
     await SellerModel.findByIdAndUpdate(sellerId, updateSeller, { new: true });
+
     let pageUrl = paymentPageResponse.body;
 
     return res.status(200).json({ pageUrl: pageUrl });
@@ -173,6 +169,115 @@ async function createCreditsPayment(req, res) {
     return res
       .status(500)
       .json({ error: error.message || "An error occurred" });
+  }
+}
+
+// create membership transaction
+async function createMembershipTransaction(req, res) {
+  const { entityId, state } = req.body;
+  const transaction = await TransactionModel.findOne({
+    transactionId: entityId,
+  });
+
+  if (!transaction) {
+    return res.status(404).json({ error: "Transaction not found" });
+  }
+  const { sellerId, memberShip } = transaction || {};
+  const { credit } = memberShip || {};
+  const id = sellerId;
+  const existSeller = await SellerModel.findOne({ _id: id });
+  const { username, email } = existSeller || {};
+  const membershipComplete = {
+    memberShipStatus: "complete",
+    credits: credit,
+    memberShip,
+  };
+  const membershipFailed = {
+    memberShipStatus: "failed",
+    credits: 0,
+    memberShip,
+  };
+
+  try {
+    if (state === "FULFILL") {
+      await SellerModel.findByIdAndUpdate(id, membershipComplete, {
+        new: true,
+      });
+      await sendEmailNotification(
+        username,
+        email,
+        "Your payment has complete",
+        `Your payment is complete. You have received your membership. Now you can bid on any jobs. Happy Bidding.`,
+        "GOOD NEWS: your membership is updated."
+      );
+    }
+    if (state === "FAILED") {
+      await SellerModel.findByIdAndUpdate(id, membershipFailed, {
+        new: true,
+      });
+      await sendEmailNotification(
+        username,
+        email,
+        "Your payment has failed.",
+        `We are sorry to say, Your payment has failed. Please contact our support as soon as possible if you have already paid.`,
+        "Sorry your payment has failed."
+      );
+    }
+    res.status(200).json({ message: "Webhook received" });
+  } catch (error) {
+    res.status(500).json(error);
+  }
+}
+
+// create credit transaction
+async function createCreditTransaction(req, res) {
+  const { entityId, state } = req.body;
+  const transaction = await TransactionModel.findOne({
+    transactionId: entityId,
+  });
+
+  if (!transaction) {
+    return res.status(404).json({ error: "Transaction not found" });
+  }
+  const { sellerId, credits } = transaction || {};
+  const { credit } = credits || {};
+  const id = sellerId;
+  const existSeller = await SellerModel.findOne({ _id: id });
+  const membershipComplete = {
+    credits: existSeller?.credits + credit,
+  };
+  const membershipFailed = {
+    credits: 0,
+  };
+  const { username, email } = existSeller || {};
+  try {
+    if (state === "FULFILL") {
+      await SellerModel.findByIdAndUpdate(id, membershipComplete, {
+        new: true,
+      });
+      await sendEmailNotification(
+        username,
+        email,
+        "Your payment has complete",
+        `Your payment is complete. You have received ${credit} credits. Now you can bid more jobs. Happy Bidding.`,
+        `GOOD NEWS: You have received ${credit} credits`
+      );
+    }
+    if (state === "FAILED") {
+      await SellerModel.findByIdAndUpdate(id, membershipFailed, {
+        new: true,
+      });
+      await sendEmailNotification(
+        username,
+        email,
+        "Your payment has failed",
+        `We are sorry to say your payment has failed. Please contact our support as soon as possible if you have already paid.`,
+        `GOOD NEWS: You have received ${credit} credits`
+      );
+    }
+    res.status(200).json({ message: "Webhook received" });
+  } catch (error) {
+    res.status(500).json(error);
   }
 }
 
@@ -236,6 +341,49 @@ async function getAllTransactions(req, res) {
   }
 }
 
+async function sendEmailNotification(name, email, subject, message, introMSG) {
+  const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+      user: EMAIL,
+      pass: PASSWORD,
+    },
+  });
+  const mailGenerator = new Mailgen({
+    theme: "default",
+    product: {
+      name: "Suisse-Offerten",
+      link: "http://suisse-offerten.ch/",
+    },
+  });
+  const emailTemplate = {
+    body: {
+      name: `${name}`,
+      intro: `${introMSG}`,
+      outro: `
+        <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
+          <strong style="font-size: 16px;">Message:</strong>
+          <p style="font-size: 14px; color: #555;">${message}</p>
+        </div>
+        <p style="font-size: 14px; color: #777;">Please login to your account to reply to this message.</p>
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
+      `,
+    },
+  };
+  emailTemplate.body.message = `${message}`;
+  const emailBody = mailGenerator.generate(emailTemplate);
+  const mailOptions = {
+    from: EMAIL,
+    to: email,
+    subject: subject,
+    html: emailBody,
+  };
+  await transporter.sendMail(mailOptions);
+}
+
 module.exports = {
   createMembershipPayment,
   getAllPayment,
@@ -245,4 +393,6 @@ module.exports = {
   updatePaymentMembershipStatus,
   getAllTransactions,
   updatePaymentCredit,
+  createMembershipTransaction,
+  createCreditTransaction,
 };
