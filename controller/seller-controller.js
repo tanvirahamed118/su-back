@@ -2,6 +2,7 @@ require("dotenv").config();
 const SellerModel = require("../models/seller-model");
 const ClientModel = require("../models/client-model");
 const OTPModel = require("../models/otp-model");
+const ReviewModel = require("../models/review-model");
 const bcrypt = require("bcrypt");
 const EMAIL = process.env.EMAIL;
 const PASSWORD = process.env.PASSWORD;
@@ -15,12 +16,45 @@ const supportPhone = process.env.SUPPORT_PHONE;
 const corsUrl = process.env.CORS_URL;
 
 // Get All Seller
-async function getSeller(req, res) {
+async function getAllSeller(req, res) {
   try {
-    const data = await SellerModel.find();
-    res.status(200).json(data);
+    const { page = 1, limit = 20, category, location } = req.query;
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    const filter = {};
+    if (category) {
+      filter.categoryCode = { $in: [Number(category)] };
+    }
+    if (location) {
+      filter.location = location;
+    }
+    const skip = (pageNumber - 1) * limitNumber;
+    const sellers = await SellerModel.find(filter)
+      .skip(skip)
+      .limit(limitNumber);
+    const datas = await Promise.all(
+      sellers.map(async (seller) => {
+        const latestReview = await ReviewModel.findOne({
+          sellerId: seller._id,
+        }).sort({ createdAt: -1 });
+        return {
+          ...seller._doc,
+          reviewData: latestReview || null,
+        };
+      })
+    );
+
+    const totalSellers = await SellerModel.countDocuments(filter);
+    const totalPages = Math.ceil(totalSellers / limitNumber);
+    res.status(200).json({
+      currentPage: pageNumber,
+      totalPages,
+      totalSellers,
+      sellers: datas,
+    });
   } catch (error) {
-    res.status(500).json(error);
+    console.error("Error fetching sellers:", error);
+    res.status(500).json({ error: "Failed to fetch sellers" });
   }
 }
 
@@ -60,7 +94,6 @@ async function getOneSeller(req, res) {
   if (!id) {
     return res.status(400).json({ message: "ID is required" });
   }
-
   try {
     const existSeller = await SellerModel.findOne({ _id: id });
 
@@ -84,7 +117,6 @@ async function register(req, res) {
     phone,
     furtherInfo,
     username,
-
     referance,
     password,
     agreement,
@@ -198,7 +230,6 @@ async function sellerEmailVarification(req, res) {
         .status(400)
         .json({ message: "Invalid token or seller not found" });
     }
-
     seller.emailVerify = true;
     await seller.save();
 
@@ -280,7 +311,7 @@ async function otpSend(req, res) {
   try {
     const existSeller = await SellerModel.findOne({ email: email });
     if (existSeller) {
-      let otp = Math.floor(Math.random() * 10000 + 1);
+      let otp = Math.floor(100000 + Math.random() * 900000).toString();
       let otpData = new OTPModel({
         email,
         code: otp,
@@ -329,7 +360,9 @@ async function otpSend(req, res) {
         html: mail,
       };
       transport.sendMail(message).then(() => {
-        return res.status(200).json({ email: email, message: "OTP Send" });
+        return res
+          .status(200)
+          .json({ email: email, message: "OTP Send", status: "ok" });
       });
     } else {
       res.status(400).json({ message: "Data Not Found" });
@@ -379,6 +412,25 @@ async function changePassword(req, res) {
   }
 }
 
+async function changePasswordBySeller(req, res) {
+  const { password } = req.body;
+  const id = req.params.id;
+  try {
+    let seller = await SellerModel.findOne({ _id: id });
+    if (seller) {
+      bcrypt.hash(password, 10, async function (err, hash) {
+        seller.password = hash;
+        await seller.save();
+        res.status(200).json({ message: "Password Changed" });
+      });
+    } else {
+      res.status(400).json({ message: "Data not found!" });
+    }
+  } catch (error) {
+    res.status(500).json(error);
+  }
+}
+
 // Update seller
 async function updateSeller(req, res) {
   const {
@@ -399,39 +451,37 @@ async function updateSeller(req, res) {
     location,
     phone,
     secondPhone,
-    password,
+    newsletter,
   } = req.body;
 
   const id = req.params.id;
   const existSeller = await SellerModel.findOne({ _id: id });
   try {
     if (existSeller) {
-      bcrypt.hash(password, 10, async function (err, hash) {
-        const updateSeller = {
-          salutation,
-          firstName,
-          lastName,
-          director,
-          dirfirstname,
-          dirlastname,
-          companyName,
-          leagalForm,
-          foundingYear,
-          website,
-          UIDNumber,
-          iban,
-          streetNo,
-          postalCode,
-          location,
-          phone,
-          secondPhone,
-          password: hash,
-        };
-        await SellerModel.findByIdAndUpdate(id, updateSeller, {
-          new: true,
-        });
-        res.status(200).json({ message: "Update Successful" });
+      const updateSeller = {
+        salutation,
+        firstName,
+        lastName,
+        director,
+        dirfirstname,
+        dirlastname,
+        companyName,
+        leagalForm,
+        foundingYear,
+        website,
+        UIDNumber,
+        iban,
+        streetNo,
+        postalCode,
+        location,
+        phone,
+        secondPhone,
+        newsletter,
+      };
+      await SellerModel.findByIdAndUpdate(id, updateSeller, {
+        new: true,
       });
+      res.status(200).json({ message: "Update Successful" });
     } else {
       res.status(400).json({ message: "Data Not Found" });
     }
@@ -595,32 +645,41 @@ async function sendEmailNotification(name, email, subject, verify) {
 async function updateSellerCompany(req, res) {
   const { companyDescription, companyTitle, companyInfo } = req.body;
   const id = req.params.id;
-  const existSeller = await SellerModel.findOne({ _id: id });
 
   try {
-    if (existSeller) {
-      const updateSeller = {
-        companyDescription,
-        companyTitle,
-        companyLogo: req?.files?.companyLogo[0]?.location,
-        companyCover: req?.files?.companyCover[0]?.location,
-        companyInfo: Array.isArray(companyInfo) ? companyInfo : [],
-      };
+    const existSeller = await SellerModel.findById(id);
 
-      if (
-        req.files["companyPictures"] &&
-        req.files["companyPictures"].length > 0
-      ) {
-        updateSeller.companyPictures = req.files["companyPictures"].map(
-          (file) => file.location
-        );
-      }
-
-      await SellerModel.findByIdAndUpdate(id, updateSeller, { new: true });
-      res.status(200).json({ message: "Update Successful" });
-    } else {
-      res.status(400).json({ message: "Data Not Found" });
+    if (!existSeller) {
+      return res.status(400).json({ message: "Data Not Found" });
     }
+
+    const basePath = `${req.protocol}://${req.get("host")}/public/uploads/`;
+
+    // Handle companyLogo and companyCover if provided
+    const companyLogo = req.files?.companyLogo?.[0]?.originalname
+      ?.split(" ")
+      .join("-");
+    const companyCover = req.files?.companyCover?.[0]?.originalname
+      ?.split(" ")
+      .join("-");
+
+    const updateSeller = {
+      companyDescription,
+      companyTitle,
+      companyLogo: companyLogo ? `${basePath}${companyLogo}` : null,
+      companyCover: companyCover ? `${basePath}${companyCover}` : null,
+      companyInfo: Array.isArray(companyInfo) ? companyInfo : [],
+    };
+
+    // Handle multiple company pictures if provided
+    if (req.files?.companyPictures && req.files.companyPictures.length > 0) {
+      updateSeller.companyPictures = req.files.companyPictures.map(
+        (file) => `${basePath}${file.originalname.split(" ").join("-")}`
+      );
+    }
+
+    await SellerModel.findByIdAndUpdate(id, updateSeller, { new: true });
+    res.status(200).json({ message: "Update Successful" });
   } catch (error) {
     res.status(500).json({ message: "Update Failed", error: error.message });
   }
@@ -628,7 +687,7 @@ async function updateSellerCompany(req, res) {
 
 // update seller activity
 async function updateSellerActivity(req, res) {
-  const { activities, locations } = req.body;
+  const { activities, locations, categoryCode, categories } = req.body;
   const { id } = req.params;
 
   const existSeller = await SellerModel.findOne({ _id: id });
@@ -637,6 +696,8 @@ async function updateSellerActivity(req, res) {
       const newSellerActivity = {
         activities: [...activities],
         preference: [...locations],
+        categories: [...categories],
+        categoryCode: [...categoryCode],
       };
       await SellerModel.findByIdAndUpdate(id, newSellerActivity, {
         new: true,
@@ -701,16 +762,33 @@ async function createSellerByAdmin(req, res) {
 
 // Delete company pictures
 async function deleteSellerCompanyPictures(req, res) {
-  const { item } = req.body;
+  const { item, role } = req.body;
   const { id } = req.params;
   try {
     const existSeller = await SellerModel.findOne({ _id: id });
+    let updateSeller;
+
     if (existSeller) {
-      const updateSeller = await SellerModel.findByIdAndUpdate(
-        id,
-        { $pull: { companyPictures: item } },
-        { new: true }
-      );
+      if (role === "cover") {
+        updateSeller = await SellerModel.findByIdAndUpdate(
+          id,
+          { companyCover: null },
+          { new: true }
+        );
+      } else if (role === "logo") {
+        updateSeller = await SellerModel.findByIdAndUpdate(
+          id,
+          { companyLogo: null },
+          { new: true }
+        );
+      } else {
+        updateSeller = await SellerModel.findByIdAndUpdate(
+          id,
+          { $pull: { companyPictures: item } },
+          { new: true }
+        );
+      }
+
       res
         .status(200)
         .json({ message: "Delete Successful", updatedSeller: updateSeller });
@@ -729,11 +807,13 @@ async function uploadSellerAddress(req, res) {
   try {
     const existSeller = await SellerModel.findOne({ _id: id });
     if (existSeller) {
+      const basePath = `${req.protocol}://${req.get("host")}/public/uploads/`;
+      const file = req?.file?.originalname.split(" ").join("-");
       const updateData = {
         postalCode,
         streetNo,
         location,
-        addressFile: req.file.location,
+        addressFile: `${basePath ? `${basePath}${file}` : "null"}`,
       };
       await SellerModel.findByIdAndUpdate(id, updateData, { new: true });
       res.status(200).json({ message: "Submit Successful" });
@@ -746,7 +826,7 @@ async function uploadSellerAddress(req, res) {
 }
 
 module.exports = {
-  getSeller,
+  getAllSeller,
   getOneSeller,
   register,
   login,
@@ -764,4 +844,5 @@ module.exports = {
   createSellerByAdmin,
   deleteSellerCompanyPictures,
   uploadSellerAddress,
+  changePasswordBySeller,
 };

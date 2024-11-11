@@ -105,6 +105,14 @@ const sellerSchema = mongoose.Schema(
       type: Array,
       default: [],
     },
+    categories: {
+      type: Array,
+      default: [],
+    },
+    categoryCode: {
+      type: Array,
+      default: [],
+    },
     companyDescription: {
       type: String,
     },
@@ -148,6 +156,9 @@ const sellerSchema = mongoose.Schema(
     },
     addressFile: {
       type: String,
+    },
+    newsletter: {
+      type: Boolean,
     },
   },
   { timestamps: true }

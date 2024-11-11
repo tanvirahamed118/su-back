@@ -18,7 +18,6 @@ async function getAllContact(req, res) {
     if (status) {
       filter.status = status;
     }
-
     const emails = await ContactModel.find(filter)
       .skip(skip)
       .limit(limitNumber);
@@ -73,7 +72,6 @@ async function createContact(req, res) {
       role,
       status: "unread",
     });
-
     let config = {
       service: "gmail",
       auth: {
@@ -149,7 +147,6 @@ async function updateContact(req, res) {
   const id = req.params.id;
   const { notice, name, email, phone, service, role } = req.body;
   const existMessage = await ContactModel.findOne({ _id: id });
-
   try {
     const updateMessage = {
       notice,

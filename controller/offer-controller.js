@@ -1,6 +1,5 @@
 const OfferModel = require("../models/offer-model");
 const JobModel = require("../models/job-model");
-const ProposalModel = require("../models/proposal-model");
 const SellerModel = require("../models/seller-model");
 const ClientModel = require("../models/client-model");
 const CommunicationModel = require("../models/communication-model");
@@ -160,41 +159,25 @@ async function getAllOfferBySeller(req, res) {
 async function getAllOfferBySellerBoth(req, res) {
   try {
     const { page = 1, limit = 10, status, sellerId } = req.query;
-
-    // Convert page and limit to numbers with default fallback
     const pageNumber = parseInt(page, 10) || 1;
     const limitNumber = parseInt(limit, 10) || 10;
     const skip = (pageNumber - 1) * limitNumber;
-
-    // Split the status string by commas if it's a string, otherwise handle as array
     const statusArray = typeof status === "string" ? status.split(",") : [];
 
-    // Construct the filter
     const filter = {
-      sellerId: sellerId || undefined, // Make sure sellerId is valid
-      ...(statusArray.length > 0 && { status: { $in: statusArray } }), // Only add status filter if non-empty
+      sellerId: sellerId || undefined,
+      ...(statusArray.length > 0 && { status: { $in: statusArray } }),
     };
 
-    // Perform the query
     const offers = await OfferModel.find(filter).skip(skip).limit(limitNumber);
-
-    // Get total number of offers matching the filter
     const totalOffers = await OfferModel.countDocuments(filter);
-
-    // Calculate total pages for pagination
     const totalPages = Math.ceil(totalOffers / limitNumber);
-
-    // Process related data (sellers, clients, jobs)
     const sellerIds = [...new Set(offers.map((p) => p.sellerId))];
     const clientIds = [...new Set(offers.map((p) => p.clientId))];
     const jobIds = [...new Set(offers.map((p) => p.jobId))];
-
-    // Fetch related data
     const sellers = await SellerModel.find({ _id: { $in: sellerIds } });
     const clients = await ClientModel.find({ _id: { $in: clientIds } });
     const jobs = await JobModel.find({ _id: { $in: jobIds } });
-
-    // Create data maps for fast lookup
     const sellerDataMap = sellers.reduce((map, item) => {
       map[item._id.toString()] = item;
       return map;
@@ -209,16 +192,12 @@ async function getAllOfferBySellerBoth(req, res) {
       map[item._id.toString()] = item;
       return map;
     }, {});
-
-    // Combine offer data with related data
     const detailedParticipations = offers.map((participation) => ({
       ...participation._doc,
       sellerData: sellerDataMap[participation.sellerId.toString()] || null,
       clientData: clientDataMap[participation.clientId.toString()] || null,
       jobData: jobMap[participation.jobId.toString()] || null,
     }));
-
-    // Send response with pagination and detailed offer data
     res.status(200).json({
       currentPage: pageNumber,
       totalPages,
@@ -226,7 +205,6 @@ async function getAllOfferBySellerBoth(req, res) {
       offers: detailedParticipations,
     });
   } catch (error) {
-    // Handle errors
     res.status(500).json({ error: error.message });
   }
 }
@@ -235,27 +213,19 @@ async function getAllOfferBySellerBoth(req, res) {
 async function getOneOfferByBoth(req, res) {
   try {
     const { jobId = "", sellerId = "" } = req.query;
-
-    // Build the filter object for the query
     const filter = {};
     if (sellerId) filter.sellerId = sellerId;
     if (jobId) filter.jobId = jobId;
-
-    // Find one offer that matches both sellerId and jobId
     const offer = await OfferModel.findOne(filter);
-
     if (!offer) {
       return res
         .status(404)
         .json({ message: "No offer found with the given sellerId and jobId." });
     }
 
-    // Fetch the associated seller, job, and client using the IDs in the offer
     const sellerData = await SellerModel.findById(offer.sellerId);
     const clientData = await ClientModel.findById(offer.clientId);
     const jobData = await JobModel.findById(offer.jobId);
-
-    // Construct a single response object with the detailed data
     const detailedParticipation = {
       ...offer._doc,
       sellerData: sellerData || null,
@@ -498,16 +468,15 @@ async function sendBidRequest(req, res) {
     } else if (existOffer.offerPlaced) {
       return res.status(400).json({ message: "You are already bid" });
     } else {
-      let file;
-      if (req.file) {
-        file = req.file.location;
-      }
+      const file = req?.file?.originalname.split(" ").join("-");
+      const basePath = `${req.protocol}://${req.get("host")}/public/uploads/`;
+      const offerFiles = file ? `${basePath}${file}` : null;
       if (existCommunication) {
         const requestData = {
           offerPrice,
           priceUnit,
           offerNote,
-          offerFiles: file,
+          offerFiles: offerFiles,
           status: "submit",
           offerPlaced: true,
           offerPlacedNotify: true,
@@ -621,7 +590,6 @@ async function updateOfferRequest(req, res) {
           sellerId: offer.sellerId,
         });
 
-        // Send rejection email to other sellers
         await sendEmailNotification(
           username,
           rejectSeller.email,
@@ -629,8 +597,6 @@ async function updateOfferRequest(req, res) {
           `Sorry to inform you that ${username} did not accept your offer for the job: ${jobTitle}. Please log in to your dashboard for more details.`,
           username
         );
-
-        // Push rejection message to communication
         let rejectUpdateData = { $push: {} };
         rejectUpdateData.$push.clientMessage = {
           message: `We are sorry to inform you that your proposal was rejected.`,
@@ -646,8 +612,6 @@ async function updateOfferRequest(req, res) {
           rejectBid: rejectBid > 0 ? placeBid - 1 + rejectBid : placeBid - 1,
           placeBid: 1,
         };
-
-        // Update offer status to rejected
         await OfferModel.findByIdAndUpdate(offer._id, rejectData, {
           new: true,
         });
@@ -696,14 +660,7 @@ async function createOffer(req, res) {
     const existJob = await JobModel.findOne({
       _id: jobId,
     });
-    const existProposal = await ProposalModel.findOne({
-      jobId: jobId,
-      sellerId: sellerId,
-    });
 
-    if (existProposal) {
-      return res.status(400).json({ message: "Already have a proposal" });
-    }
     if (existOffer) {
       return res.status(400).json({ message: "Already send a request" });
     }
@@ -848,15 +805,14 @@ async function updateOfferDetails(req, res) {
   const { offerPrice, priceUnit, offerNote } = req.body;
   const id = req.params.id;
   try {
-    let file;
-    if (req.file) {
-      file = req.file.location;
-    }
+    const file = req?.file?.originalname.split(" ").join("-");
+    const basePath = `${req.protocol}://${req.get("host")}/public/uploads/`;
+    const offerFiles = file ? `${basePath}${file}` : null;
     const updateOffer = {
       offerPrice,
       priceUnit,
       offerNote,
-      offerFiles: file,
+      offerFiles: offerFiles,
     };
 
     await OfferModel.findByIdAndUpdate(id, updateOffer, { new: true });

@@ -1,7 +1,6 @@
 const ReviewModel = require("../models/review-model");
 const SellerModel = require("../models/seller-model");
 const JobModel = require("../models/job-model");
-const ProposalModel = require("../models/proposal-model");
 const OfferModel = require("../models/offer-model");
 const nodemailer = require("nodemailer");
 const Mailgen = require("mailgen");

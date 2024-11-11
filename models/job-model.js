@@ -10,6 +10,9 @@ const jobSchema = mongoose.Schema(
     jobCategoryCode: {
       type: String,
     },
+    jobCategoryId: {
+      type: String,
+    },
     jobSubCategories: {
       type: Array,
       default: [],

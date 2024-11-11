@@ -135,15 +135,11 @@ async function createCreditsPayment(req, res) {
     transaction.currency = "CHF";
     transaction.failedUrl = `${baseURL}/seller-dashboard/seller-credit/payment-fail`;
     transaction.successUrl = `${baseURL}/seller-dashboard/seller-credit/payment-success`;
-
-    // Create the transaction
     const transactionResponse = await transactionService.create(
       spaceId,
       transaction
     );
     let transactionCreate = transactionResponse.body;
-
-    // Get the payment page URL
     const paymentPageResponse =
       await transactionPaymentPageService.paymentPageUrl(
         spaceId,
@@ -161,9 +157,7 @@ async function createCreditsPayment(req, res) {
     };
 
     await SellerModel.findByIdAndUpdate(sellerId, updateSeller, { new: true });
-
     let pageUrl = paymentPageResponse.body;
-
     return res.status(200).json({ pageUrl: pageUrl });
   } catch (error) {
     return res

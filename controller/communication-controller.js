@@ -1,6 +1,5 @@
 const CommunicationModel = require("../models/communication-model");
 const SellerModel = require("../models/seller-model");
-const PerticipationModel = require("../models/perticipation-model");
 const ClientModel = require("../models/client-model");
 const JobModel = require("../models/job-model");
 const nodemailer = require("nodemailer");
@@ -109,16 +108,6 @@ const createCommunication = async (req, res) => {
             ]
           : [],
       });
-
-      const PerticipationData = new PerticipationModel({
-        sellerId: existSeller?._id,
-        jobId: jobId,
-        clientId: clientId,
-        message: sellerMessage,
-        jobTitle: existJob?.jobTitle,
-        jobNumber: existJob?.jobNumber,
-        jobLocation: existJob?.jobLocation,
-      });
       const bid = existJob.placeBid > 0 ? existJob.placeBid + 1 : 1;
       const updateJob = {
         placeBid: bid,
@@ -146,9 +135,7 @@ const createCommunication = async (req, res) => {
           );
         }
       }
-
       await JobModel.findByIdAndUpdate(jobId, updateJob, { new: true });
-      await PerticipationData.save();
       await reviewData.save();
       res.status(201).json({ message: "Message Sent" });
     }
@@ -189,7 +176,6 @@ const updateCommunication = async (req, res) => {
     const existSeller = await SellerModel.findOne({ _id: sellerId });
     const existClient = await ClientModel.findOne({ _id: clientId });
     if (sellerMessage) {
-      // Seller sent a message, send email to client
       if (existClient) {
         await sendEmailNotification(
           existClient.username,
@@ -200,7 +186,6 @@ const updateCommunication = async (req, res) => {
         );
       }
     } else if (clientMessage) {
-      // Client sent a message, send email to seller
       if (existSeller) {
         await sendEmailNotification(
           existSeller.username,

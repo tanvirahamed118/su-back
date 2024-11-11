@@ -41,6 +41,9 @@ const clientSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
+    newsletter: {
+      type: Boolean,
+    },
   },
   { timestamps: true }
 );

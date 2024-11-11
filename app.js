@@ -13,21 +13,18 @@ const reviewRouter = require("./routes/review-router");
 const newsRouter = require("./routes/news-router");
 const wishlistRouter = require("./routes/wishlist-router");
 const paymentRouter = require("./routes/payment-router");
-const proposalRouter = require("./routes/proposal-route");
-const perticipationRouter = require("./routes/perticipation-route");
 const offerRouter = require("./routes/offer-router");
 const membershipRouter = require("./routes/membership-router");
 const adminRouter = require("./routes/admin-router");
-const settingRouter = require("./routes/sitesetting-router");
-const categoryRouter = require("./routes/category-router");
 const CORS_URL = process.env.CORS_URL;
 const DASHBOARD_URL = process.env.DASHBOARD_URL;
 const allowedOrigins = [CORS_URL, DASHBOARD_URL];
 const cron = require("node-cron");
 
 // App Use Middlewares
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ limit: "100mb", extended: true }));
+app.use("/public/uploads", express.static(__dirname + "/public/uploads"));
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -56,13 +53,9 @@ app.use("/auth/review", reviewRouter);
 app.use("/auth/news", newsRouter);
 app.use("/auth/wishlist", wishlistRouter);
 app.use("/auth/payment", paymentRouter);
-app.use("/auth/proposal", proposalRouter);
-app.use("/auth/perticipation", perticipationRouter);
 app.use("/auth/offer", offerRouter);
 app.use("/auth/membership", membershipRouter);
 app.use("/auth/admin", adminRouter);
-app.use("/auth/setting", settingRouter);
-app.use("/auth/category", categoryRouter);
 
 // Home Route
 app.get("/", auth, (req, res) => {

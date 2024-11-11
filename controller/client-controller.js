@@ -33,11 +33,9 @@ async function getAllClientsByAdmin(req, res) {
     const limitNumber = parseInt(limit);
     const skip = (pageNumber - 1) * limitNumber;
     const filter = {};
-
     if (status) {
       filter.status = status;
     }
-
     const clients = await ClientModel.find(filter)
       .skip(skip)
       .limit(limitNumber);
@@ -50,7 +48,6 @@ async function getAllClientsByAdmin(req, res) {
         return client;
       })
     );
-
     const totalClients = await ClientModel.countDocuments(filter);
     const totalPages = Math.ceil(totalClients / limitNumber);
     res.status(200).json({
@@ -82,7 +79,6 @@ async function getClientById(req, res) {
 // get client by email
 async function getClientByEmail(req, res) {
   const { jobEmail } = req.query;
-
   const existClient = await ClientModel.findOne({ email: jobEmail });
   try {
     if (!existClient) {
@@ -114,7 +110,6 @@ async function register(req, res) {
   const existCleintByUsername = await ClientModel.findOne({
     username: username,
   });
-
   try {
     if (existCleintByEmail || existSeller) {
       return res.status(404).json({ message: "Email Already Exist" });
@@ -122,7 +117,6 @@ async function register(req, res) {
     if (existCleintByUsername) {
       return res.status(404).json({ message: "Username Already Exist" });
     }
-
     bcrypt.hash(password, 10, async function (err, hash) {
       const newClient = new ClientModel({
         salutation,
@@ -165,7 +159,6 @@ async function sendVerificationCode(companyName, email) {
       pass: PASSWORD,
     },
   });
-
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
@@ -173,7 +166,6 @@ async function sendVerificationCode(companyName, email) {
       link: "http://suisse-offerten.ch/",
     },
   });
-
   const emailTemplate = {
     body: {
       name: `${companyName}`,
@@ -194,9 +186,7 @@ async function sendVerificationCode(companyName, email) {
       `,
     },
   };
-
   const emailBody = mailGenerator.generate(emailTemplate);
-
   const mailOptions = {
     from: EMAIL,
     to: email,
@@ -268,7 +258,7 @@ async function sendJobEmails(
   sellerNames
 ) {
   const transporter = nodemailer.createTransport({
-    service: "gmail", // or any SMTP service provider
+    service: "gmail",
     auth: {
       user: EMAIL,
       pass: PASSWORD,
@@ -282,12 +272,10 @@ async function sendJobEmails(
       link: "http://suisse-offerten.ch/",
     },
   });
-
-  // Loop through both emails and names
   for (let i = 0; i < sellerNames.length; i++) {
     const emailTemplate = {
       body: {
-        name: sellerNames[i], // Personalize email with seller's username
+        name: sellerNames[i],
         intro: `A new job has been posted: ${jobTitle}`,
 
         outro: `
@@ -320,12 +308,10 @@ async function sendJobEmails(
 
     const message = {
       from: EMAIL,
-      to: sellerEmails[i], // Send email to the current seller
+      to: sellerEmails[i],
       subject: `New Job Posted: ${jobTitle}`,
       html: emailBody,
     };
-
-    // Send the email
     await transporter.sendMail(message);
   }
 }
@@ -341,7 +327,6 @@ async function login(req, res) {
   } else {
     username = input;
   }
-
   try {
     const existClientByEmail = await ClientModel.findOne({ email: email });
     const existClientByUsername = await ClientModel.findOne({
@@ -364,7 +349,6 @@ async function login(req, res) {
         return res.status(404).json({ message: "Please verify your account" });
       }
     }
-
     const matchpassword = await bcrypt.compare(
       password,
       existClientByEmail
@@ -402,14 +386,13 @@ async function otpSend(req, res) {
   try {
     const existClient = await ClientModel.findOne({ email: email });
     if (existClient) {
-      let otp = Math.floor(Math.random() * 10000 + 1);
+      let otp = Math.floor(100000 + Math.random() * 900000).toString();
       let otpData = new OTPModel({
         email,
         code: otp,
         expireIn: new Date().getTime() + 300 * 1000,
       });
       await otpData.save();
-
       let config = {
         service: "gmail",
         auth: {
@@ -436,7 +419,7 @@ async function otpSend(req, res) {
               },
             ],
           },
-          outro: `<p style="font-size: 14px; color: #777;">Please check your email, you have receive OTP code</p>
+          outro: `<p style="font-size: 14px; color: #777;">Please use this OTP code to change your password.</p>
         <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
         <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
@@ -451,7 +434,9 @@ async function otpSend(req, res) {
         html: mail,
       };
       transport.sendMail(message).then(() => {
-        return res.status(200).json({ email: email, message: "OTP Send" });
+        return res
+          .status(200)
+          .json({ email: email, message: "OTP Send", status: "ok" });
       });
     } else {
       res.status(400).json({ message: "Data Not Found" });
@@ -501,6 +486,25 @@ async function changePassword(req, res) {
   }
 }
 
+async function changePasswordByClient(req, res) {
+  const { password } = req.body;
+  const id = req.params.id;
+  try {
+    let client = await ClientModel.findOne({ _id: id });
+    if (client) {
+      bcrypt.hash(password, 10, async function (err, hash) {
+        client.password = hash;
+        await client.save();
+        res.status(200).json({ message: "Password Changed" });
+      });
+    } else {
+      res.status(400).json({ message: "Data not found!" });
+    }
+  } catch (error) {
+    res.status(500).json(error);
+  }
+}
+
 // Update Client
 async function updateClient(req, res) {
   const {
@@ -512,10 +516,9 @@ async function updateClient(req, res) {
     secondPhone,
     username,
     referance,
-    password,
     agreement,
+    newsletter,
   } = req.body;
-
   const id = req.params.id;
   const existClient = await ClientModel.findOne({ _id: id });
   try {
@@ -529,8 +532,8 @@ async function updateClient(req, res) {
         secondPhone,
         username,
         referance,
-        password,
         agreement,
+        newsletter,
       };
       await ClientModel.findByIdAndUpdate(id, updateClient, {
         new: true,
@@ -654,4 +657,5 @@ module.exports = {
   getAllClientsByAdmin,
   updateClientStatusByAdmin,
   createClientByAdmin,
+  changePasswordByClient,
 };

@@ -3,6 +3,7 @@ const ClientModel = require("../models/client-model");
 const SellerModel = require("../models/seller-model");
 const VerifyModel = require("../models/verify-model");
 const WishlistModel = require("../models/wishlist-model");
+const OfferModel = require("../models/offer-model");
 const EMAIL = process.env.EMAIL;
 const PASSWORD = process.env.PASSWORD;
 const nodemailer = require("nodemailer");
@@ -16,25 +17,20 @@ const corsUrl = process.env.CORS_URL;
 // get all job
 async function getAllJob(req, res) {
   try {
-    const { page = 1, limit = 20, category = "", location = "" } = req.query;
+    const { page, limit, category = "", location = "" } = req.query;
     const pageNumber = parseInt(page);
     const limitNumber = parseInt(limit);
-    const decodedCategory = decodeURIComponent(category);
-    const deSplit = decodedCategory.split("_").join(" ");
     const skip = (pageNumber - 1) * limitNumber;
-
     const filter = { status: "active" };
     if (category) {
-      filter.jobCategoryCode = deSplit;
+      filter.jobCategoryId = Number(category);
     }
     if (location) {
       filter.jobCity = location;
     }
-
     const jobs = await JobModel.find(filter).skip(skip).limit(limitNumber);
     const totalJobs = await JobModel.countDocuments(filter);
     const totalPages = Math.ceil(totalJobs / limitNumber);
-
     res.status(200).json({
       currentPage: pageNumber,
       totalPages,
@@ -49,25 +45,20 @@ async function getAllJob(req, res) {
 // get all job by admin
 async function getAllJobByAdmin(req, res) {
   try {
-    const { page = 1, limit = 20, search = "", status = "" } = req.query;
+    const { page, limit, search = "", status = "" } = req.query;
     const pageNumber = parseInt(page);
     const limitNumber = parseInt(limit);
-
     const skip = (pageNumber - 1) * limitNumber;
-
     const filter = {};
-
     if (search) {
       filter.jobNumber = search;
     }
     if (status) {
       filter.status = status;
     }
-
     const jobs = await JobModel.find(filter).skip(skip).limit(limitNumber);
     const totalJobs = await JobModel.countDocuments(filter);
     const totalPages = Math.ceil(totalJobs / limitNumber);
-
     res.status(200).json({
       currentPage: pageNumber,
       totalPages,
@@ -91,7 +82,7 @@ async function getAllJobDefault(req, res) {
 
 // get jobs by category
 async function getJobsByCategory(req, res) {
-  const { category, page = 1, limit = 20 } = req.query;
+  const { category, page, limit } = req.query;
   const skip = (page - 1) * limit;
   try {
     const query = category ? { jobCategoryCode: category } : {};
@@ -106,7 +97,7 @@ async function getJobsByCategory(req, res) {
 // get all jobs by client
 async function getAllJobByClient(req, res) {
   try {
-    const { page = 1, limit = 20, email } = req.query;
+    const { page, limit, email } = req.query;
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
     const skip = (pageNumber - 1) * limitNumber;
@@ -118,7 +109,6 @@ async function getAllJobByClient(req, res) {
     const jobs = await JobModel.find(filter).skip(skip).limit(limitNumber);
     const totalJobs = await JobModel.countDocuments(filter);
     const totalPages = Math.ceil(totalJobs / limitNumber);
-
     res.status(200).json({
       currentPage: pageNumber,
       totalPages,
@@ -133,13 +123,7 @@ async function getAllJobByClient(req, res) {
 // get all jobs by seller
 async function getAllJobBySeller(req, res) {
   try {
-    const {
-      page = 1,
-      limit = 20,
-      id,
-      category = "",
-      location = "",
-    } = req.query;
+    const { page, limit, id, category = "", location = "" } = req.query;
     const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
     const limitNumber = Math.max(parseInt(limit, 10) || 20, 1);
     const skip = (pageNumber - 1) * limitNumber;
@@ -148,7 +132,6 @@ async function getAllJobBySeller(req, res) {
       return res.status(404).json({ message: "Seller not found" });
     }
     const { preference: locations = [], activities = [] } = existSeller;
-
     if (locations.length === 0 || activities.length === 0) {
       return res.status(200).json({
         currentPage: pageNumber,
@@ -157,7 +140,6 @@ async function getAllJobBySeller(req, res) {
         jobs: [],
       });
     }
-
     const filter = {
       $and: [
         { jobCity: { $in: locations } },
@@ -165,7 +147,6 @@ async function getAllJobBySeller(req, res) {
       ],
       status: "active",
     };
-
     if (category) {
       filter.jobCategoryCode = category;
     }
@@ -223,8 +204,8 @@ async function createJob(req, res) {
     firstname,
     lastname,
     phone,
+    jobCategoryId,
   } = req.body;
-
   try {
     let email;
     let jobUsername;
@@ -234,8 +215,8 @@ async function createJob(req, res) {
     let sellerUsername = await SellerModel.findOne({ username: username });
     const matchingSellers = await SellerModel.find({
       $and: [
-        { preference: { $in: jobCity } }, // Match job location to seller preference
-        { activities: { $in: jobSubCategories.split(",") } }, // Match job subcategories to seller activities
+        { preference: { $in: jobCity } },
+        { activities: { $in: jobSubCategories.split(",") } },
       ],
     });
 
@@ -261,13 +242,11 @@ async function createJob(req, res) {
       jobUsername = clientEmail.username;
     }
     let file = [];
-
-    if (req.files && req.files.length > 0) {
-      for (let i = 0; i < req.files.length; i++) {
-        file.push(req.files[i].location);
-      }
+    const basePath = `${req.protocol}://${req.get("host")}/public/uploads/`;
+    for (let i = 0; i < req?.files.length; i++) {
+      const path = req?.files[i]?.originalname.split(" ").join("-");
+      file.push(`${basePath}${path}`);
     }
-
     const generatedNumbers = new Set();
     const generateNum = (min, max) => {
       let randomNumber;
@@ -277,14 +256,10 @@ async function createJob(req, res) {
       generatedNumbers.add(randomNumber);
       return randomNumber;
     };
+
     const uniqueNumber = generateNum(100000, 10000000);
-    // Apply the same filter logic used in the seller dashboard
-
-    // Find sellers matching the filter
-
     const sellerEmails = matchingSellers.map((seller) => seller.email);
     const sellerNames = matchingSellers.map((seller) => seller.username);
-
     if (sellerEmails.length > 0 && clinetId) {
       await sendJobEmails(
         sellerEmails,
@@ -313,6 +288,7 @@ async function createJob(req, res) {
       jobSubCategories: jobSubCategories.split(","),
       status: clinetId ? "active" : "pending",
       credits,
+      jobCategoryId,
     });
     await job.save();
 
@@ -394,9 +370,7 @@ async function sendJobEmails(
       `,
       },
     };
-
     const emailBody = mailGenerator.generate(emailTemplate);
-
     const message = {
       from: EMAIL,
       to: sellerEmails[i],
@@ -591,7 +565,6 @@ async function updateJob(req, res) {
     jobCity,
     status,
   } = req.body;
-
   try {
     let file = [];
     if (req.files && req.files.length > 0) {
@@ -599,7 +572,6 @@ async function updateJob(req, res) {
         file.push(req.files[i].location);
       }
     }
-
     const updateOffer = {
       jobTitle,
       jobDescription,
@@ -611,11 +583,9 @@ async function updateJob(req, res) {
       jobImage: file,
       status,
     };
-
     await JobModel.findByIdAndUpdate(id, updateOffer, {
       new: true,
     });
-
     res.status(201).json({ message: "Update Successful" });
   } catch (error) {
     res.status(500).json(error);
@@ -630,6 +600,7 @@ async function deleteJob(req, res) {
     if (existEvent) {
       await JobModel.findByIdAndDelete(id);
       await WishlistModel.deleteMany({ jobId: id });
+      await OfferModel.deleteMany({ jobId: id });
       res.status(200).json({ message: "Delete Successful" });
     } else {
       res.status(400).json({ message: "Data Not Found!" });
@@ -642,7 +613,6 @@ async function deleteJob(req, res) {
 // filter jobs
 async function filterJob(req, res) {
   const { jobsCategory } = req.body;
-
   const jobs = await JobModel.find();
   const filterData = jobs.filter((item) =>
     jobsCategory.includes(item?.category)

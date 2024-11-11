@@ -14,7 +14,7 @@ const {
 } = require("../controller/review-controller");
 const auth = require("../middlewares/auth");
 
-router.get("/", auth, getAllReview);
+router.get("/", getAllReview);
 router.get("/default", auth, getAllReviewsDefault);
 router.get("/admin", auth, getAllReviewByAdmin);
 router.get("/:id", auth, getUserReview);

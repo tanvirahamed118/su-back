@@ -1,29 +1,33 @@
+// multerSingle.js
 const multer = require("multer");
-const multerS3 = require("multer-s3");
-const AWS = require("aws-sdk");
-require("dotenv").config();
+const path = require("path");
 
-const BucketName = process.env.AWS_BUCKET_NAME;
+const FILE_TYPE_MAP = {
+  ".png": "png",
+  ".jpeg": "jpeg",
+  ".jpg": "jpg",
+};
 
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION,
+const Storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const isValid =
+      FILE_TYPE_MAP[path.extname(file.originalname).toLowerCase()];
+    let uploadError = new Error("Invalid image type");
+
+    if (isValid) {
+      uploadError = null;
+    }
+
+    cb(uploadError, "public/uploads");
+  },
+  filename: function (req, file, cb) {
+    const fileName = file.originalname.split(" ").join("-");
+    cb(null, fileName);
+  },
 });
 
 const upload = multer({
-  storage: multerS3({
-    s3: s3,
-    bucket: BucketName,
-    contentType: multerS3.AUTO_CONTENT_TYPE,
-    metadata: function (req, file, cb) {
-      cb(null, { fieldName: file.fieldname });
-    },
-    key: function (req, file, cb) {
-      cb(null, Date.now().toString() + "-" + file.originalname);
-    },
-  }),
-  limits: { fileSize: 50 * 1024 * 1024 },
+  storage: Storage,
 });
 
 const jobFiles = upload.array("jobFiles");

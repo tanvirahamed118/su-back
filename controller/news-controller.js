@@ -33,9 +33,7 @@ async function getAllNewsByAdmin(req, res) {
     if (status) {
       filter.status = status;
     }
-
     const news = await NewsModel.find(filter).skip(skip).limit(limitNumber);
-
     const totalNews = await NewsModel.countDocuments(filter);
     const totalPages = Math.ceil(totalNews / limitNumber);
     res.status(200).json({

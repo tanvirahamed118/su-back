@@ -40,9 +40,7 @@ async function getOneAdmin(req, res) {
 // Register Admin
 async function register(req, res) {
   const { username, email, password, agreement } = req.body;
-
   const existAdmin = await AdminModel.findOne({ email: email });
-
   try {
     if (existAdmin) {
       return res.status(404).json({ message: "Email Already Exist" });
@@ -82,7 +80,6 @@ async function login(req, res) {
     if (!matchpassword) {
       return res.status(400).json({ message: "Incorrect Password" });
     }
-
     const token = jwt.sign(
       { email: existAdmin.email, id: existAdmin._id },
       SECRET_KEY
@@ -123,7 +120,9 @@ async function updateAdmin(req, res) {
   } = req.body;
   const id = req.params.id;
   const existAdmin = await AdminModel.findOne({ _id: id });
-
+  const profile = req?.files?.profile[0]?.originalname.split(" ").join("-");
+  const cover = req?.files.cover[0]?.originalname?.split(" ")?.join("-");
+  const basePath = `${req.protocol}://${req.get("host")}/public/uploads/`;
   try {
     if (existAdmin) {
       const UpdateAdmin = {
@@ -147,10 +146,9 @@ async function updateAdmin(req, res) {
         photoshop,
         microsoft,
         headline,
-        profile: req?.files?.profile[0]?.location,
-        cover: req?.files?.cover[0]?.location,
+        profile: `${basePath ? `${basePath}${profile}` : "null"}`,
+        cover: `${basePath ? `${basePath}${cover}` : "null"}`,
       };
-
       await AdminModel.findByIdAndUpdate(id, UpdateAdmin, {
         new: true,
       });
@@ -168,7 +166,6 @@ async function updateAdmin(req, res) {
 // OTP Send
 async function otpSend(req, res) {
   const { email } = req.body;
-
   try {
     const existAdmin = await AdminModel.findOne({ email: email });
     if (existAdmin) {
