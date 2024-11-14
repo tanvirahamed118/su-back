@@ -58,6 +58,12 @@ async function createMembershipPayment(req, res) {
   const { id } = req.params;
   const url = `${baseURL}/seller-dashboard/payment-success`;
   try {
+    const existSeller = await SellerModel.findOne({ _id: id });
+    const { memberShip } = existSeller || {};
+
+    if (memberShip) {
+      return res.status(400).json({ message: "Membership already created" });
+    }
     if (item?.plan === "free") {
       const updateMembership = {
         memberShip: item,
@@ -103,7 +109,13 @@ async function createMembershipPayment(req, res) {
         cost: currentPrice,
         status: "pending",
       });
-
+      await SellerModel.findByIdAndUpdate(
+        id,
+        {
+          memberShipStatus: "not-complete",
+        },
+        { new: true }
+      );
       let pageUrl = paymentPageResponse.body;
       return res.status(200).json({ pageUrl: pageUrl });
     }
@@ -184,12 +196,12 @@ async function createMembershipTransaction(req, res) {
   const membershipComplete = {
     memberShipStatus: "complete",
     credits: credit,
-    memberShip,
+    memberShip: memberShip,
   };
   const membershipFailed = {
     memberShipStatus: "failed",
     credits: 0,
-    memberShip,
+    memberShip: memberShip,
   };
 
   try {
@@ -237,16 +249,17 @@ async function createCreditTransaction(req, res) {
   const { credit } = credits || {};
   const id = sellerId;
   const existSeller = await SellerModel.findOne({ _id: id });
-  const membershipComplete = {
+  const creditComplete = {
     credits: existSeller?.credits + credit,
+    pendingCredits: 0,
   };
-  const membershipFailed = {
+  const creditFailed = {
     credits: 0,
   };
   const { username, email } = existSeller || {};
   try {
     if (state === "FULFILL") {
-      await SellerModel.findByIdAndUpdate(id, membershipComplete, {
+      await SellerModel.findByIdAndUpdate(id, creditComplete, {
         new: true,
       });
       await sendEmailNotification(
@@ -258,7 +271,7 @@ async function createCreditTransaction(req, res) {
       );
     }
     if (state === "FAILED") {
-      await SellerModel.findByIdAndUpdate(id, membershipFailed, {
+      await SellerModel.findByIdAndUpdate(id, creditFailed, {
         new: true,
       });
       await sendEmailNotification(
@@ -270,40 +283,6 @@ async function createCreditTransaction(req, res) {
       );
     }
     res.status(200).json({ message: "Webhook received" });
-  } catch (error) {
-    res.status(500).json(error);
-  }
-}
-
-async function updatePaymentMembershipStatus(req, res) {
-  const { credit, sellerId, status } = req.body;
-  const existSeller = await SellerModel.findOne({ _id: sellerId });
-  try {
-    if (existSeller) {
-      const updateData = {
-        memberShipStatus: status,
-        credits: credit,
-      };
-      await SellerModel.findByIdAndUpdate(sellerId, updateData, { new: true });
-      res.status(200).json({ message: "Update Successful" });
-    }
-  } catch (error) {
-    res.status(500).json(error);
-  }
-}
-
-async function updatePaymentCredit(req, res) {
-  const { credit, sellerId } = req.body;
-  const existSeller = await SellerModel.findOne({ _id: sellerId });
-  try {
-    if (existSeller) {
-      const updateData = {
-        credits: existSeller?.credits + credit,
-        pendingCredits: 0,
-      };
-      await SellerModel.findByIdAndUpdate(sellerId, updateData, { new: true });
-      res.status(200).json({ message: "Update Successful" });
-    }
   } catch (error) {
     res.status(500).json(error);
   }
@@ -335,6 +314,7 @@ async function getAllTransactions(req, res) {
   }
 }
 
+// send email notifications
 async function sendEmailNotification(name, email, subject, message, introMSG) {
   const transporter = nodemailer.createTransport({
     service: "Gmail",
@@ -384,9 +364,7 @@ module.exports = {
   getSinglePayment,
   deletePayment,
   createCreditsPayment,
-  updatePaymentMembershipStatus,
   getAllTransactions,
-  updatePaymentCredit,
   createMembershipTransaction,
   createCreditTransaction,
 };

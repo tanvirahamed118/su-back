@@ -148,7 +148,6 @@ const sellerSchema = mongoose.Schema(
     },
     memberShipStatus: {
       type: String,
-      default: "not-complete",
     },
     pendingCredits: {
       type: Number,

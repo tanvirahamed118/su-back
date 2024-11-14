@@ -7,8 +7,6 @@ const {
   deletePayment,
   createCreditsPayment,
   getAllTransactions,
-  updatePaymentMembershipStatus,
-  updatePaymentCredit,
   createMembershipTransaction,
   createCreditTransaction,
 } = require("../controller/payment-controller");
@@ -22,7 +20,5 @@ router.post("/:id", createMembershipPayment);
 router.post("/:id", deletePayment);
 router.post("/create/transaction/credits", createCreditTransaction);
 router.post("/create/transaction", createMembershipTransaction);
-router.patch("/membership", auth, updatePaymentMembershipStatus);
-router.patch("/credit", auth, updatePaymentCredit);
 
 module.exports = router;

@@ -49,7 +49,7 @@ const getsingleWishlist = async (req, res) => {
     if (exiistWishlist) {
       res.status(200).json(exiistWishlist);
     } else {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(200).json({});
     }
   } catch (error) {
     res.status(500).json(error);
@@ -71,6 +71,7 @@ const createWishlist = async (req, res) => {
     const wishlistData = new WishlistModel({
       saverId: saverId,
       jobId,
+      status: "saved",
     });
     await wishlistData.save();
     res.status(200).json({ wishlistData, message: "Job Saved" });
