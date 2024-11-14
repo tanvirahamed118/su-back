@@ -2,15 +2,15 @@ const MembershipModel = require("../models/membership.model");
 const SellerModel = require("../models/seller-model");
 
 // get one Membership
-const getOneMembership = async (req, res) => {
+async function getOneMembership(req, res) {
   const { id } = req.params;
   try {
     const Membership = await MembershipModel.findOne({ _id: id });
     res.status(200).json(Membership);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
 // get all Membership
 async function getAllMembership(req, res) {
@@ -18,12 +18,12 @@ async function getAllMembership(req, res) {
     const Membership = await MembershipModel.find();
     res.status(200).json(Membership);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
 // create Membership
-const createMembership = async (req, res) => {
+async function createMembership(req, res) {
   const {
     title,
     savePrice,
@@ -54,14 +54,14 @@ const createMembership = async (req, res) => {
       plan,
     });
     await createData.save();
-    res.status(200).json({ message: "Membership create successful" });
+    res.status(200).json({ message: "Membership Create Successful" });
   } catch (error) {
-    res.status(500).json({ error: error, message: "request Faild!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
 // cancel Membership
-const cancelMembership = async (req, res) => {
+async function cancelMembership(req, res) {
   const { id } = req.params;
   const existSeller = await SellerModel.findOne({ _id: id });
   try {
@@ -74,15 +74,15 @@ const cancelMembership = async (req, res) => {
       await SellerModel.findByIdAndUpdate(id, updateSeller, {
         new: true,
       });
-      res.status(200).json({ message: "Membership cancel successful" });
+      res.status(200).json({ message: "Membership Cancel Successful" });
     }
   } catch (error) {
-    res.status(500).json({ error: error, message: "request Faild!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
 // update Membership
-const updateMembership = async (req, res) => {
+async function updateMembership(req, res) {
   const { id } = req.params;
   const {
     title,
@@ -116,29 +116,29 @@ const updateMembership = async (req, res) => {
       });
       res.status(200).json({ message: "Membership update successful" });
     } else {
-      res.status(200).json({ message: "Membership not found!" });
+      res.status(200).json({ message: "Membership Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ error: error, message: "request Faild!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
 // delete Membership
-const deleteMembership = async (req, res) => {
+async function deleteMembership(req, res) {
   const { id } = req.params;
   const existMembership = await MembershipModel.findOne({ _id: id });
 
   try {
     if (existMembership) {
       await MembershipModel.findByIdAndDelete(id);
-      res.status(200).json({ message: "Delete successful" });
+      res.status(200).json({ message: "Delete Successful" });
     } else {
-      res.status(200).json({ message: "Membership not found!" });
+      res.status(200).json({ message: "Membership Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ error: error, message: "Update Faild!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
 module.exports = {
   getOneMembership,

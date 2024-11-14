@@ -11,14 +11,14 @@ const supportMail = process.env.SUPPORT_MAIL;
 const supportPhone = process.env.SUPPORT_PHONE;
 const corsUrl = process.env.CORS_URL;
 
-// get all Offer
+// get one Offer
 async function getOneOffer(req, res) {
   const { id } = req.params;
   try {
     const Offer = await OfferModel.findOne({ _id: id });
     res.status(200).json(Offer);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -30,7 +30,7 @@ async function getOneOfferByJobId(req, res) {
     const Offer = await OfferModel.findOne({ jobId: id, sellerId: sellerId });
     res.status(200).json(Offer);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -40,7 +40,7 @@ async function getAllOfferDefault(req, res) {
     const Offer = await OfferModel.find();
     res.status(200).json(Offer);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -96,11 +96,11 @@ async function getAllOffer(req, res) {
       offers: detailedParticipations,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// get all offer
+// get all offer by seller
 async function getAllOfferBySeller(req, res) {
   try {
     const { page, limit, status, sellerId } = req.query;
@@ -151,11 +151,11 @@ async function getAllOfferBySeller(req, res) {
       offers: detailedParticipations,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// get all offer
+// get all offer by seller both
 async function getAllOfferBySellerBoth(req, res) {
   try {
     const { page = 1, limit = 10, status, sellerId } = req.query;
@@ -205,11 +205,11 @@ async function getAllOfferBySellerBoth(req, res) {
       offers: detailedParticipations,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// get all offer
+// get one offer by both
 async function getOneOfferByBoth(req, res) {
   try {
     const { jobId = "", sellerId = "" } = req.query;
@@ -218,9 +218,7 @@ async function getOneOfferByBoth(req, res) {
     if (jobId) filter.jobId = jobId;
     const offer = await OfferModel.findOne(filter);
     if (!offer) {
-      return res
-        .status(404)
-        .json({ message: "No offer found with the given sellerId and jobId." });
+      return res.status(404).json({ message: "Offer Not Found" });
     }
 
     const sellerData = await SellerModel.findById(offer.sellerId);
@@ -235,11 +233,11 @@ async function getOneOfferByBoth(req, res) {
 
     res.status(200).json(detailedParticipation);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// get all offer
+// get all offer by client
 async function getAllOfferByClient(req, res) {
   try {
     const { clientId, page, limit, reviewSubmited, status } = req.query;
@@ -303,7 +301,7 @@ async function getAllOfferByClient(req, res) {
       offers: detailedParticipations,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -321,7 +319,7 @@ async function createPerticipation(req, res) {
 
   try {
     if (existoffer?.length >= 5) {
-      return res.status(400).json({ message: "No more bid are accepted" });
+      return res.status(400).json({ message: "No More Bid Are Accepted" });
     }
     if (credits >= jobCredit) {
       const updateSellerCredit = {
@@ -371,10 +369,10 @@ async function createPerticipation(req, res) {
       });
       res.status(200).json({ message: "Perticipation Successful" });
     } else {
-      res.status(400).json({ message: "You do not have enough credit!" });
+      res.status(400).json({ message: "You Do Not Have Enough Credit" });
     }
   } catch (error) {
-    res.status(500).json({ error: error, message: "Perticipation Faild!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -437,11 +435,11 @@ async function makeOfferRequest(req, res) {
     }
     res.status(200).json({ message: "Request Send Successful" });
   } catch (error) {
-    res.status(500).json({ error: error, message: "Request Send Faild!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// make request offer
+// send bid request
 async function sendBidRequest(req, res) {
   const { offerPrice, priceUnit, offerNote, sellerId, jobId } = req.body;
   const existSeller = await SellerModel.findOne({ _id: sellerId });
@@ -464,9 +462,9 @@ async function sendBidRequest(req, res) {
     if (!existOffer.offerRequested) {
       return res
         .status(400)
-        .json({ message: "You are not eligble to send bid" });
+        .json({ message: "You Are Not Eligble to Send Bid" });
     } else if (existOffer.offerPlaced) {
-      return res.status(400).json({ message: "You are already bid" });
+      return res.status(400).json({ message: "You Are Already Send Bid" });
     } else {
       const file = req?.file?.originalname.split(" ").join("-");
       const basePath = `${req.protocol}://${req.get("host")}/public/uploads/`;
@@ -519,9 +517,9 @@ async function sendBidRequest(req, res) {
         });
       }
     }
-    res.status(200).json({ message: "Bid Successful" });
+    res.status(200).json({ message: "Bid Send Successful" });
   } catch (error) {
-    res.status(500).json({ error: error, message: "Bid Faild!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -643,7 +641,7 @@ async function updateOfferRequest(req, res) {
     }
     res.status(200).json({ message: `Offer ${status}` });
   } catch (error) {
-    res.status(500).json({ error: error, message: "Request Send Faild!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -662,12 +660,12 @@ async function createOffer(req, res) {
     });
 
     if (existOffer) {
-      return res.status(400).json({ message: "Already send a request" });
+      return res.status(400).json({ message: "Already Send A request" });
     }
     if (existSeller.credits < 2) {
       return res
         .status(400)
-        .json({ message: "Seller does not have enough credits" });
+        .json({ message: "Seller Does Not Have Enough Credit" });
     }
     const existCommunication = await CommunicationModel.findOne({
       jobId: jobId,
@@ -714,9 +712,9 @@ async function createOffer(req, res) {
     };
     await SellerModel.findByIdAndUpdate(id, updateData, { new: true });
     await OfferData.save();
-    res.status(200).json({ message: "Request send" });
+    res.status(200).json({ message: "Request Send Successful" });
   } catch (error) {
-    res.status(500).json({ error: error, message: "request Faild!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -793,10 +791,10 @@ async function updateOfferView(req, res) {
     };
     await OfferModel.updateMany(filter, updateView);
     res.status(200).json({
-      message: "communications marked as seen.",
+      message: "Communications Marked As Seen",
     });
   } catch (error) {
-    res.status(500).json({ error: error, message: "Update Faild!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -820,7 +818,7 @@ async function updateOfferDetails(req, res) {
       message: "Update Successful",
     });
   } catch (error) {
-    res.status(500).json({ error: error, message: "Update Faild!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -834,12 +832,12 @@ async function offerReviewRequest(req, res) {
         reviewRequest: true,
       };
       await OfferModel.findByIdAndUpdate(id, updateData, { new: true });
-      res.status(200).json({ message: "Review request send" });
+      res.status(200).json({ message: "Review Request Send" });
     } else {
-      res.status(400).json("Data not found!");
+      res.status(400).json("Data not found");
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -853,12 +851,12 @@ async function offerArchiveRequest(req, res) {
         offerArchived: true,
       };
       await OfferModel.findByIdAndUpdate(id, updateData, { new: true });
-      res.status(200).json({ message: "Offer Archived" });
+      res.status(200).json({ message: "Offer Archived Successful" });
     } else {
-      res.status(400).json("Data not found!");
+      res.status(400).json("Data Not Found");
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 

@@ -18,7 +18,7 @@ async function getAdmin(req, res) {
     const data = await AdminModel.find();
     res.status(200).json(data);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -28,12 +28,12 @@ async function getOneAdmin(req, res) {
   const existAdmin = await AdminModel.findOne({ _id: id });
   try {
     if (!existAdmin) {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(400).json({ message: "Data Not Found" });
     } else {
       res.status(200).json(existAdmin);
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -64,7 +64,7 @@ async function register(req, res) {
       });
     });
   } catch (error) {
-    res.status(500).json({ error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -74,7 +74,7 @@ async function login(req, res) {
   try {
     const existAdmin = await AdminModel.findOne({ email: email });
     if (!existAdmin) {
-      return res.status(404).json({ message: "Data Not Found!" });
+      return res.status(404).json({ message: "Data Not Found" });
     }
     const matchpassword = await bcrypt.compare(password, existAdmin.password);
     if (!matchpassword) {
@@ -90,7 +90,7 @@ async function login(req, res) {
       message: "Login Successful",
     });
   } catch (error) {
-    res.status(500).json({ message: "Login Faild", error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -159,7 +159,7 @@ async function updateAdmin(req, res) {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ error: error, message: "Update Failed" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -226,7 +226,7 @@ async function otpSend(req, res) {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -247,7 +247,7 @@ async function otpCheck(req, res) {
       res.status(500).json({ message: "OTP Does Not Match" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -263,10 +263,10 @@ async function changePassword(req, res) {
         res.status(200).json({ message: "Password Changed" });
       });
     } else {
-      res.status(400).json({ message: "Data not found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -290,7 +290,7 @@ async function updateAdminPassword(req, res) {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Update Failed" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -303,10 +303,10 @@ async function deleteAdmin(req, res) {
       await AdminModel.findByIdAndDelete(id);
       res.status(200).json({ message: "Account Deleted" });
     } else {
-      res.status(400).json({ message: "Data Does Not Exist" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Accoount Delete Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 

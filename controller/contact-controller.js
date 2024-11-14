@@ -30,17 +30,17 @@ async function getAllContact(req, res) {
       emails,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// Get All contact
+// Get All contact by default
 async function getAllContactDefault(req, res) {
   try {
     const emails = await ContactModel.find();
     res.status(200).json(emails);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -55,7 +55,7 @@ async function getSingleContact(req, res) {
       res.status(200).json(existMessage);
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -138,7 +138,7 @@ async function createContact(req, res) {
       return res.status(201).json({ newMessage, message: "Message Send" });
     });
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -163,10 +163,10 @@ async function updateContact(req, res) {
 
       res.status(200).json({ updateMessage, message: "Update Successful" });
     } else {
-      res.status(400).json({ message: "Message Not Found!" });
+      res.status(400).json({ message: "Message Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -186,10 +186,10 @@ async function updateContactStatus(req, res) {
 
       res.status(200).json({ updateMessage, message: "Update Successful" });
     } else {
-      res.status(400).json({ message: "Message Not Found!" });
+      res.status(400).json({ message: "Message Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -205,7 +205,7 @@ async function deleteContact(req, res) {
       res.status(400).json({ message: "Message Does Not Exist" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Accoount Delete Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 

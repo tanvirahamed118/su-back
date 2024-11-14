@@ -53,8 +53,7 @@ async function getAllSeller(req, res) {
       sellers: datas,
     });
   } catch (error) {
-    console.error("Error fetching sellers:", error);
-    res.status(500).json({ error: "Failed to fetch sellers" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -84,7 +83,7 @@ async function getAllSellersByAdmin(req, res) {
       sellers: sellers,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -92,7 +91,7 @@ async function getAllSellersByAdmin(req, res) {
 async function getOneSeller(req, res) {
   const id = req.params.id;
   if (!id) {
-    return res.status(400).json({ message: "ID is required" });
+    return res.status(400).json({ message: "ID is Required" });
   }
   try {
     const existSeller = await SellerModel.findOne({ _id: id });
@@ -103,7 +102,7 @@ async function getOneSeller(req, res) {
       return res.status(200).json(existSeller);
     }
   } catch (error) {
-    return res.status(500).json({ message: "Server Error", error });
+    return res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -164,15 +163,15 @@ async function register(req, res) {
       await sendVerificationEmail(companyName, email, token);
       res.status(201).json({
         seller: newSeller,
-        message: "Registration successful, please check your email",
+        message: "Registration Successful, Please Check Your Email",
       });
     });
   } catch (error) {
-    res.status(500).json({ message: "Registration Faild!", error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// email send
+// email send for varification
 async function sendVerificationEmail(companyName, email, token) {
   const transporter = nodemailer.createTransport({
     service: "Gmail",
@@ -228,14 +227,14 @@ async function sellerEmailVarification(req, res) {
     if (!seller) {
       return res
         .status(400)
-        .json({ message: "Invalid token or seller not found" });
+        .json({ message: "Invalid Token or Seller Not Found" });
     }
     seller.emailVerify = true;
     await seller.save();
 
-    return res.status(200).json({ message: "Email verified successfully!" });
+    return res.status(200).json({ message: "Email Verified Successfully!" });
   } catch (error) {
-    return res.status(500).json({ message: "Invalid or expired token", error });
+    return res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -261,7 +260,7 @@ async function login(req, res) {
         return res.status(404).json({ message: "Seller Not Found" });
       }
       if (!existSellerByEmail?.emailVerify) {
-        return res.status(404).json({ message: "Seller email not verifyed" });
+        return res.status(404).json({ message: "Seller Email Not Verifyed" });
       }
     }
 
@@ -270,7 +269,7 @@ async function login(req, res) {
         return res.status(404).json({ message: "Seller Not Found" });
       }
       if (!existSellerByUsername?.emailVerify) {
-        return res.status(404).json({ message: "Seller email not verifyed" });
+        return res.status(404).json({ message: "Seller Email Not Verifyed" });
       }
     }
 
@@ -301,7 +300,7 @@ async function login(req, res) {
       message: "Login Successful",
     });
   } catch (error) {
-    res.status(500).json({ message: "login Faild", error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -368,7 +367,7 @@ async function otpSend(req, res) {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -389,7 +388,7 @@ async function otpCheck(req, res) {
       res.status(500).json({ message: "OTP Does Not Match" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -405,13 +404,14 @@ async function changePassword(req, res) {
         res.status(200).json({ message: "Password Changed" });
       });
     } else {
-      res.status(400).json({ message: "Data not found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
+// change password by seller
 async function changePasswordBySeller(req, res) {
   const { password } = req.body;
   const id = req.params.id;
@@ -424,10 +424,10 @@ async function changePasswordBySeller(req, res) {
         res.status(200).json({ message: "Password Changed" });
       });
     } else {
-      res.status(400).json({ message: "Data not found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -486,7 +486,7 @@ async function updateSeller(req, res) {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Update Failed", error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -508,11 +508,11 @@ async function updateSellerStatus(req, res) {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Update Failed", error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// Update seller stqtus
+// Update seller stqtus by admin
 async function updateSellerStatusByAdmin(req, res) {
   const { role, id, status } = req.body;
   const existSeller = await SellerModel.findOne({ _id: id });
@@ -585,7 +585,7 @@ async function updateSellerStatusByAdmin(req, res) {
         } else {
           return res
             .status(400)
-            .json({ message: "Please verify email and uid!" });
+            .json({ message: "Please Verify Email and UID" });
         }
       }
       res.status(200).json({ message: "Update Successful" });
@@ -593,7 +593,7 @@ async function updateSellerStatusByAdmin(req, res) {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Update Failed", error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -681,7 +681,7 @@ async function updateSellerCompany(req, res) {
     await SellerModel.findByIdAndUpdate(id, updateSeller, { new: true });
     res.status(200).json({ message: "Update Successful" });
   } catch (error) {
-    res.status(500).json({ message: "Update Failed", error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -702,12 +702,12 @@ async function updateSellerActivity(req, res) {
       await SellerModel.findByIdAndUpdate(id, newSellerActivity, {
         new: true,
       });
-      res.status(200).json({ message: "Activity saved" });
+      res.status(200).json({ message: "Activity Saved" });
     } else {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Update Failed", error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -723,7 +723,7 @@ async function deleteSeller(req, res) {
       res.status(400).json({ message: "Data Not Exist" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Accoount Delete Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -756,7 +756,7 @@ async function createSellerByAdmin(req, res) {
       res.status(201).json({ message: "Account Created Successful" });
     });
   } catch (error) {
-    res.status(500).json({ message: "Accoount Create Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -796,7 +796,7 @@ async function deleteSellerCompanyPictures(req, res) {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Delete Failed", error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -821,7 +821,7 @@ async function uploadSellerAddress(req, res) {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Submit Failed", error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 

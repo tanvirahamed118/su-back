@@ -32,7 +32,7 @@ async function getAllPayment(req, res) {
     const data = await PaymentModel.find();
     res.status(200).json(data);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -47,7 +47,7 @@ async function getSinglePayment(req, res) {
       res.status(200).json(existMessage);
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -62,7 +62,7 @@ async function createMembershipPayment(req, res) {
     const { memberShip } = existSeller || {};
 
     if (memberShip) {
-      return res.status(400).json({ message: "Membership already created" });
+      return res.status(400).json({ message: "Membership Already Created" });
     }
     if (item?.plan === "free") {
       const updateMembership = {
@@ -120,7 +120,7 @@ async function createMembershipPayment(req, res) {
       return res.status(200).json({ pageUrl: pageUrl });
     }
   } catch (error) {
-    return res.status(500).json(error);
+    return res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -172,9 +172,7 @@ async function createCreditsPayment(req, res) {
     let pageUrl = paymentPageResponse.body;
     return res.status(200).json({ pageUrl: pageUrl });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ error: error.message || "An error occurred" });
+    return res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -186,7 +184,7 @@ async function createMembershipTransaction(req, res) {
   });
 
   if (!transaction) {
-    return res.status(404).json({ error: "Transaction not found" });
+    return res.status(404).json({ error: "Transaction Not Found" });
   }
   const { sellerId, memberShip } = transaction || {};
   const { credit } = memberShip || {};
@@ -231,7 +229,7 @@ async function createMembershipTransaction(req, res) {
     }
     res.status(200).json({ message: "Webhook received" });
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -243,7 +241,7 @@ async function createCreditTransaction(req, res) {
   });
 
   if (!transaction) {
-    return res.status(404).json({ error: "Transaction not found" });
+    return res.status(404).json({ error: "Transaction Not Found" });
   }
   const { sellerId, credits } = transaction || {};
   const { credit } = credits || {};
@@ -284,7 +282,7 @@ async function createCreditTransaction(req, res) {
     }
     res.status(200).json({ message: "Webhook received" });
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -300,7 +298,7 @@ async function deletePayment(req, res) {
       res.status(400).json({ message: "Transection Does Not Exist" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Transection Delete Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -310,7 +308,7 @@ async function getAllTransactions(req, res) {
     let existtransac = await TransactionModel.find();
     res.status(200).json(existtransac);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 

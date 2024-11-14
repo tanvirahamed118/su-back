@@ -16,11 +16,11 @@ const getAllCommunication = async (req, res) => {
     const communication = await CommunicationModel.find();
     res.status(200).json(communication);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 };
 
-// get all communication
+// get all communication by client
 const getAllCommunicationByClient = async (req, res) => {
   const { id } = req.query;
   const filter = {
@@ -30,7 +30,7 @@ const getAllCommunicationByClient = async (req, res) => {
     const communication = await CommunicationModel.find(filter);
     res.status(200).json(communication);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 };
 
@@ -43,10 +43,10 @@ const getUserCommunication = async (req, res) => {
     if (existCommunication) {
       res.status(200).json(existCommunication);
     } else {
-      res.status(400).json("Data Not Found!");
+      res.status(400).json("Data Not Found");
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 };
 
@@ -58,10 +58,10 @@ const getsingleCommunication = async (req, res) => {
     if (existCommunication) {
       res.status(200).json(existCommunication);
     } else {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 };
 
@@ -72,7 +72,7 @@ const createCommunication = async (req, res) => {
   const existClient = await ClientModel.findOne({ _id: clientId });
   const collectios = await CommunicationModel.find({ jobId: jobId });
   if (collectios.length >= 5) {
-    return res.status(400).json({ message: "Bidding are not available!" });
+    return res.status(400).json({ message: "Bidding Are Not Available" });
   }
   const existJob = await JobModel.findOne({ _id: jobId });
   const existSellerCom = await CommunicationModel.findOne({
@@ -80,7 +80,7 @@ const createCommunication = async (req, res) => {
     jobId: jobId,
   });
   if (existSellerCom) {
-    return res.status(400).json({ message: "You have already send message!" });
+    return res.status(400).json({ message: "You Have Already Send Message" });
   }
   try {
     if (existSeller) {
@@ -140,7 +140,7 @@ const createCommunication = async (req, res) => {
       res.status(201).json({ message: "Message Sent" });
     }
   } catch (error) {
-    res.status(500).json({ error: error, message: "Send Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 };
 
@@ -157,10 +157,10 @@ const updateCommunicationView = async (req, res) => {
     };
     await CommunicationModel.updateMany(filter, updateView);
     res.status(200).json({
-      message: "communications marked as seen.",
+      message: "Communications Marked As Seen",
     });
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 };
 
@@ -221,12 +221,12 @@ const updateCommunication = async (req, res) => {
         };
       }
       await CommunicationModel.findByIdAndUpdate(id, updateData, { new: true });
-      res.status(200).json({ message: "Message send" });
+      res.status(200).json({ message: "Message Send" });
     } else {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 };
 
@@ -289,10 +289,10 @@ const deleteCommunication = async (req, res) => {
       await CommunicationModel.findByIdAndDelete(id);
       res.status(200).json({ message: "Delete Successful" });
     } else {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Delete Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 };
 

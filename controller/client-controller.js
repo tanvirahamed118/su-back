@@ -21,7 +21,7 @@ async function getClient(req, res) {
     const data = await ClientModel.find();
     res.status(200).json(data);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -57,7 +57,7 @@ async function getAllClientsByAdmin(req, res) {
       clients: updatedClients,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -72,7 +72,7 @@ async function getClientById(req, res) {
       res.status(200).json(existClient);
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -87,7 +87,7 @@ async function getClientByEmail(req, res) {
       res.status(200).json(existClient);
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -134,11 +134,11 @@ async function register(req, res) {
       await sendVerificationCode(username, email);
       res.status(201).json({
         client: newClient,
-        message: "Registration Successful, please check your email",
+        message: "Registration Successful, Please Check Your Email",
       });
     });
   } catch (error) {
-    res.status(500).json({ message: "Registration Faild!", error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -199,7 +199,7 @@ async function sendVerificationCode(companyName, email) {
   return verificationCode;
 }
 
-// verify code
+// check verify code
 async function VerifyCodeCheck(req, res) {
   try {
     const data = await VerifyModel.findOne({ code: req.body.code });
@@ -215,7 +215,7 @@ async function VerifyCodeCheck(req, res) {
         ],
       });
       if (existClient?.status === "verified") {
-        return res.status(500).json({ message: "Already verified" });
+        return res.status(500).json({ message: "Already Verified" });
       }
 
       const sellerEmails = matchingSellers.map((seller) => seller.email);
@@ -239,12 +239,12 @@ async function VerifyCodeCheck(req, res) {
           sellerNames
         );
       }
-      res.status(200).json({ message: "verification successful" });
+      res.status(200).json({ message: "Verification Successful" });
     } else {
-      res.status(500).json({ message: "Enter wrong code!" });
+      res.status(500).json({ message: "Enter Wrong Code" });
     }
   } catch (error) {
-    res.status(500).json({ error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -338,7 +338,7 @@ async function login(req, res) {
         return res.status(404).json({ message: "Data Not Found" });
       }
       if (existClientByEmail?.status === "pending") {
-        return res.status(404).json({ message: "Please verify your account" });
+        return res.status(404).json({ message: "Please Verify Your Account" });
       }
     }
     if (username) {
@@ -346,7 +346,7 @@ async function login(req, res) {
         return res.status(404).json({ message: "Data Not Found" });
       }
       if (existClientByUsername?.status === "pending") {
-        return res.status(404).json({ message: "Please verify your account" });
+        return res.status(404).json({ message: "Please Verify Your Account" });
       }
     }
     const matchpassword = await bcrypt.compare(
@@ -376,7 +376,7 @@ async function login(req, res) {
       message: "Login Successful",
     });
   } catch (error) {
-    res.status(500).json({ message: "Login Faild", error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -442,7 +442,7 @@ async function otpSend(req, res) {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -463,7 +463,7 @@ async function otpCheck(req, res) {
       res.status(500).json({ message: "OTP Does Not Match" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -479,13 +479,14 @@ async function changePassword(req, res) {
         res.status(200).json({ message: "Password Changed" });
       });
     } else {
-      res.status(400).json({ message: "Data not found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
+// change password by client
 async function changePasswordByClient(req, res) {
   const { password } = req.body;
   const id = req.params.id;
@@ -498,10 +499,10 @@ async function changePasswordByClient(req, res) {
         res.status(200).json({ message: "Password Changed" });
       });
     } else {
-      res.status(400).json({ message: "Data not found!" });
+      res.status(400).json({ message: "Data Not Found!" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -545,7 +546,7 @@ async function updateClient(req, res) {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Update Failed", error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -567,7 +568,7 @@ async function updateClientStatus(req, res) {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Update Failed", error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -588,7 +589,7 @@ async function updateClientStatusByAdmin(req, res) {
       res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Update Failed", error: error });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -604,7 +605,7 @@ async function deleteClient(req, res) {
       res.status(400).json({ message: "Data Not Exist" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Accoount Delete Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -637,7 +638,7 @@ async function createClientByAdmin(req, res) {
       res.status(201).json({ message: "Account Created Successful" });
     });
   } catch (error) {
-    res.status(500).json({ message: "Accoount Create Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 

@@ -11,17 +11,17 @@ const supportPhone = process.env.SUPPORT_PHONE;
 const corsUrl = process.env.CORS_URL;
 
 // get all reviews default
-const getAllReviewsDefault = async (req, res) => {
+async function getAllReviewsDefault(req, res) {
   try {
     const reviews = await ReviewModel.find();
     res.status(200).json(reviews);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
 // get all review
-const getAllReview = async (req, res) => {
+async function getAllReview(req, res) {
   try {
     const { page = 1, limit = 20, sellerId } = req.query;
     const pageNumber = parseInt(page);
@@ -44,12 +44,12 @@ const getAllReview = async (req, res) => {
       reviews,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
 // get all review by admin
-const getAllReviewByAdmin = async (req, res) => {
+async function getAllReviewByAdmin(req, res) {
   try {
     const { page = 1, limit = 20, status } = req.query;
     const pageNumber = parseInt(page);
@@ -72,12 +72,12 @@ const getAllReviewByAdmin = async (req, res) => {
       reviews,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
 // get user review
-const getUserReview = async (req, res) => {
+async function getUserReview(req, res) {
   try {
     const existReview = await ReviewModel.find({
       jobId: req.params.id,
@@ -85,30 +85,30 @@ const getUserReview = async (req, res) => {
     if (existReview) {
       res.status(200).json(existReview);
     } else {
-      res.status(400).json("Data Not Found!");
+      res.status(400).json("Data Not Found");
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
 // get single review
-const getsingleReview = async (req, res) => {
+async function getsingleReview(req, res) {
   const id = req.params.id;
   try {
     const existReview = await ReviewModel.findOne({ _id: id });
     if (existReview) {
       res.status(200).json(existReview);
     } else {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
 // create review
-const createReview = async (req, res) => {
+async function createReview(req, res) {
   const { clinetName, review, rating, jobId, sellerId, clientId, offerId } =
     req.body;
   const existJob = await JobModel.findOne({ _id: jobId });
@@ -117,7 +117,7 @@ const createReview = async (req, res) => {
   try {
     const existIsReview = await ReviewModel.findOne({ sellerId, jobId });
     if (existIsReview) {
-      return res.status(400).json({ message: "Revew already submited" });
+      return res.status(400).json({ message: "Review Already Submited" });
     }
     const reviewData = new ReviewModel({
       clinetName,
@@ -161,15 +161,13 @@ const createReview = async (req, res) => {
 
     await SellerModel.findByIdAndUpdate(sellerId, updateSeller, { new: true });
     await OfferModel.findByIdAndUpdate(offerId, updateStatus, { new: true });
-    res.status(200).json({ message: "Review submited" });
+    res.status(200).json({ message: "Review Submited Successful" });
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: error.message, message: "Review submit failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
-// send email when proposal create and update
+// send email notification
 async function sendEmailNotification(
   name,
   email,
@@ -221,7 +219,7 @@ async function sendEmailNotification(
 }
 
 // update review
-const updateReview = async (req, res) => {
+async function updateReview(req, res) {
   const id = req.params.id;
   const { review, rating } = req.body;
   const reviewData = {
@@ -234,17 +232,17 @@ const updateReview = async (req, res) => {
       await ReviewModel.findByIdAndUpdate(id, reviewData, {
         new: true,
       });
-      res.status(200).json({ message: "Saved successful" });
+      res.status(200).json({ message: "Saved Successful" });
     } else {
-      res.status(400).json("Data Not Found!");
+      res.status(400).json("Data Not Found");
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
-// update review
-const updateReviewStatus = async (req, res) => {
+// update review status
+async function updateReviewStatus(req, res) {
   const { id, status } = req.body;
 
   let existReview = await ReviewModel.findOne({ _id: id });
@@ -256,17 +254,17 @@ const updateReviewStatus = async (req, res) => {
       await ReviewModel.findByIdAndUpdate(id, reviewData, {
         new: true,
       });
-      res.status(200).json({ message: "Saved successful" });
+      res.status(200).json({ message: "Saved Successful" });
     } else {
-      res.status(400).json("Data Not Found!");
+      res.status(400).json("Data Not Found");
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
 // delete review
-const deleteReview = async (req, res) => {
+async function deleteReview(req, res) {
   const id = req.params.id;
   let existReview = await ReviewModel.findOne({ _id: id });
   try {
@@ -277,12 +275,12 @@ const deleteReview = async (req, res) => {
       res.status(400).json({ message: "Data Not Found!" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Delete Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
 // update review useful
-const updateReviewUseful = async (req, res) => {
+async function updateReviewUseful(req, res) {
   const id = req.params.id;
   const { clientId } = req.body;
   let existReview = await ReviewModel.findOne({ _id: id });
@@ -290,7 +288,7 @@ const updateReviewUseful = async (req, res) => {
     (item) => item.usefulId === clientId
   );
   if (existUseful?.usefulId) {
-    return res.status(400).json({ message: "you have alreay liked!" });
+    return res.status(400).json({ message: "You Have Already Liked" });
   }
   try {
     if (existReview) {
@@ -306,14 +304,14 @@ const updateReviewUseful = async (req, res) => {
       await ReviewModel.findByIdAndUpdate(id, reviewData, {
         new: true,
       });
-      res.status(200).json({ message: "Liked" });
+      res.status(200).json({ message: "Liked Successful" });
     } else {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Data Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
-};
+}
 
 module.exports = {
   getAllReview,

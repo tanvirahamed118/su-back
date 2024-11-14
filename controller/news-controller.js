@@ -17,11 +17,11 @@ async function getAllNews(req, res) {
       news: news,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// get all news
+// get all news by admin
 async function getAllNewsByAdmin(req, res) {
   try {
     const { page = 1, limit = 20, status = "" } = req.query;
@@ -43,7 +43,7 @@ async function getAllNewsByAdmin(req, res) {
       news: news,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -55,10 +55,10 @@ async function getsingleNews(req, res) {
     if (exiistNews) {
       res.status(200).json(exiistNews);
     } else {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -77,9 +77,9 @@ async function createNews(req, res) {
     });
 
     await newsData.save();
-    res.status(200).json({ message: "Created successful" });
+    res.status(200).json({ message: "Created Successful" });
   } catch (error) {
-    res.status(500).json({ error: error, message: "Create Faild!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -103,12 +103,12 @@ async function updateNews(req, res) {
       await NewsModel.findByIdAndUpdate(id, newsData, {
         new: true,
       });
-      res.status(200).json({ message: "Saved successful" });
+      res.status(200).json({ message: "Saved Successful" });
     } else {
-      res.status(400).json("Data Not Found!");
+      res.status(400).json("Data Not Found");
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -121,10 +121,10 @@ async function deleteNews(req, res) {
       await NewsModel.findByIdAndDelete(id);
       res.status(200).json({ message: "Delete Successful" });
     } else {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Delete Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 

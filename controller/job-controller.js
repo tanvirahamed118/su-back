@@ -14,7 +14,7 @@ const supportMail = process.env.SUPPORT_MAIL;
 const supportPhone = process.env.SUPPORT_PHONE;
 const corsUrl = process.env.CORS_URL;
 
-// get all job
+// get all jobs
 async function getAllJob(req, res) {
   try {
     const { page, limit, category = "", location = "" } = req.query;
@@ -38,11 +38,11 @@ async function getAllJob(req, res) {
       jobs,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// get all job by admin
+// get all jobs by admin
 async function getAllJobByAdmin(req, res) {
   try {
     const { page, limit, search = "", status = "" } = req.query;
@@ -66,17 +66,17 @@ async function getAllJobByAdmin(req, res) {
       jobs,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// get all job by admin
+// get all jobs by default
 async function getAllJobDefault(req, res) {
   try {
     const jobs = await JobModel.find();
     res.status(200).json(jobs);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -90,7 +90,7 @@ async function getJobsByCategory(req, res) {
     const totalItems = await JobModel.countDocuments(query);
     res.status(200).json({ jobs, totalItems });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -116,7 +116,7 @@ async function getAllJobByClient(req, res) {
       jobs,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -129,7 +129,7 @@ async function getAllJobBySeller(req, res) {
     const skip = (pageNumber - 1) * limitNumber;
     const existSeller = await SellerModel.findOne({ _id: id });
     if (!existSeller) {
-      return res.status(404).json({ message: "Seller not found" });
+      return res.status(404).json({ message: "Seller Not Found" });
     }
     const { preference: locations = [], activities = [] } = existSeller;
     if (locations.length === 0 || activities.length === 0) {
@@ -164,11 +164,11 @@ async function getAllJobBySeller(req, res) {
       jobs,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// get one job
+// get one jobs
 async function getOneJob(req, res) {
   const id = req.params.id;
   try {
@@ -176,14 +176,14 @@ async function getOneJob(req, res) {
     if (offer) {
       return res.status(200).json(offer);
     } else {
-      return res.status(400).json({ message: "Data not found" });
+      return res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// create job
+// create jobs
 async function createJob(req, res) {
   const {
     jobTitle,
@@ -221,16 +221,16 @@ async function createJob(req, res) {
     });
 
     if (clientEmail) {
-      return res.status(400).json({ message: "Account already exist" });
+      return res.status(400).json({ message: "Account Already Exist" });
     }
     if (clientUsername) {
-      return res.status(400).json({ message: "Username already exist" });
+      return res.status(400).json({ message: "Username Already Exist" });
     }
     if (sellerEmail) {
-      return res.status(400).json({ message: "Account already exist" });
+      return res.status(400).json({ message: "Account Already Exist" });
     }
     if (sellerUsername) {
-      return res.status(400).json({ message: "Username already exist" });
+      return res.status(400).json({ message: "Username Already Exist" });
     }
     if (jobEmail) {
       email = jobEmail;
@@ -305,14 +305,14 @@ async function createJob(req, res) {
         await client.save();
         sendVerificationCode(username, email);
         res.status(201).json({
-          message: "Job is pending, please verify your email",
+          message: "Job is Pending, Please Verify Your Email",
         });
       });
     } else {
       res.status(201).json({ message: "Job Created Successful" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error", error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -548,11 +548,11 @@ async function CheckClient(req, res) {
       });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// update job
+// update jobs
 async function updateJob(req, res) {
   const id = req.params.id;
   const {
@@ -588,11 +588,11 @@ async function updateJob(req, res) {
     });
     res.status(201).json({ message: "Update Successful" });
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// delete job
+// delete jobs
 async function deleteJob(req, res) {
   const id = req.params.id;
   let existEvent = await JobModel.findOne({ _id: id });
@@ -603,10 +603,10 @@ async function deleteJob(req, res) {
       await OfferModel.deleteMany({ jobId: id });
       res.status(200).json({ message: "Delete Successful" });
     } else {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
@@ -620,11 +620,11 @@ async function filterJob(req, res) {
   try {
     res.status(200).json(filterData);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 
-// filter jobs
+// update job status
 async function updateJobStatus(req, res) {
   const { status } = req.body;
   const id = req.params.id;
@@ -637,10 +637,10 @@ async function updateJobStatus(req, res) {
       await JobModel.findByIdAndUpdate(id, updateStatus, { new: true });
       res.status(200).json({ message: "Update successful" });
     } else {
-      res.status(400).json({ message: "Data not found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 }
 

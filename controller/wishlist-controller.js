@@ -33,7 +33,7 @@ const getAllWishlist = async (req, res) => {
       wishlists: enrichedWishlists,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server Error!", error });
   }
 };
 
@@ -52,7 +52,7 @@ const getsingleWishlist = async (req, res) => {
       res.status(200).json({});
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: "Server Error!", error });
   }
 };
 
@@ -65,7 +65,7 @@ const createWishlist = async (req, res) => {
     jobId: jobId,
   });
   if (exiistWishlist) {
-    return res.status(400).json({ message: "You have already saved!" });
+    return res.status(400).json({ message: "You Have Already Save This Job" });
   }
   try {
     const wishlistData = new WishlistModel({
@@ -74,9 +74,9 @@ const createWishlist = async (req, res) => {
       status: "saved",
     });
     await wishlistData.save();
-    res.status(200).json({ wishlistData, message: "Job Saved" });
+    res.status(200).json({ wishlistData, message: "Job Saved Successful" });
   } catch (error) {
-    res.status(500).json({ error: error, message: "Save Faild!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 };
 
@@ -92,12 +92,12 @@ const updateWishlistStatus = async (req, res) => {
       await WishlistModel.findByIdAndUpdate(id, updateData, {
         new: true,
       });
-      res.status(200).json({ message: "Saved Remove" });
+      res.status(200).json({ message: "Saved Remove Successful" });
     } else {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Remove Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 };
 
@@ -108,12 +108,12 @@ const deleteWishlist = async (req, res) => {
   try {
     if (exiistWishlist) {
       await WishlistModel.findByIdAndDelete(id);
-      res.status(200).json({ message: "Saved Remove" });
+      res.status(200).json({ message: "Saved Remove Successful" });
     } else {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(400).json({ message: "Data Not Found" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Remove Failed!" });
+    res.status(500).json({ message: "Server Error!", error });
   }
 };
 
