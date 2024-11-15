@@ -495,7 +495,7 @@ async function sendBidRequest(req, res) {
         updateData.$push.sellerMessage = {
           message: `price unit: ${priceUnit}\n offer price: ${offerPrice}\n offer note: ${offerNote}${
             req.file
-              ? `\n offer file: <br> <a style="color: #777; font-weight: bold;" href="${req.file.location}" download>Download offer file</a>`
+              ? `\n offer file: <br> <a style="color: #777; font-weight: bold;" href="${offerFiles}" download>Download offer file</a>`
               : ""
           }`,
           date: new Date(),
@@ -802,6 +802,17 @@ async function updateOfferView(req, res) {
 async function updateOfferDetails(req, res) {
   const { offerPrice, priceUnit, offerNote } = req.body;
   const id = req.params.id;
+  const existOffer = await OfferModel.findOne({ _id: id });
+  const { jobId, sellerId } = existOffer || {};
+  const existSeller = await SellerModel.findOne({ _id: sellerId });
+  const { username } = existSeller || {};
+  const existJob = await JobModel.findOne({ _id: jobId });
+  const { jobTitle, jobEmail } = existJob || {};
+  const existCommunication = await CommunicationModel.findOne({
+    jobId: jobId,
+    sellerId: sellerId,
+  });
+
   try {
     const file = req?.file?.originalname.split(" ").join("-");
     const basePath = `${req.protocol}://${req.get("host")}/public/uploads/`;
@@ -812,7 +823,34 @@ async function updateOfferDetails(req, res) {
       offerNote,
       offerFiles: offerFiles,
     };
+    if (existCommunication) {
+      let updateData = { $push: {} };
+      updateData.$push.sellerMessage = {
+        message: `<strong>UPDATED:</strong> Price Unit: ${priceUnit}\n Offer Price: ${offerPrice}\n Offer Note: ${offerNote}${
+          req.file
+            ? `Offer File: <a style="color: #777; font-weight: bold;" href="${offerFiles}" download>Download offer file</a>`
+            : ""
+        }`,
+        date: new Date(),
+        time: new Date().getTime(),
+      };
 
+      await CommunicationModel.findByIdAndUpdate(
+        existCommunication?._id,
+        updateData,
+        { new: true }
+      );
+
+      await updateBidEmail(
+        username,
+        jobEmail,
+        `${username} update their bid on ${jobTitle}`,
+        username,
+        offerPrice,
+        priceUnit,
+        offerNote
+      );
+    }
     await OfferModel.findByIdAndUpdate(id, updateOffer, { new: true });
     res.status(200).json({
       message: "Update Successful",
@@ -820,6 +858,66 @@ async function updateOfferDetails(req, res) {
   } catch (error) {
     res.status(500).json({ message: "Server Error!", error });
   }
+}
+
+// update mail send
+async function updateBidEmail(
+  name,
+  email,
+  subject,
+  receiveName,
+  offerPrice,
+  priceUnit,
+  offerNote
+) {
+  const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+      user: EMAIL,
+      pass: PASSWORD,
+    },
+  });
+  const mailGenerator = new Mailgen({
+    theme: "default",
+    product: {
+      name: "Suisse-Offerten",
+      link: "http://suisse-offerten.ch/",
+    },
+  });
+  const emailTemplate = {
+    body: {
+      name: `${name}`,
+      intro: `You have received update offer from ${receiveName}:`,
+      outro: `
+        <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px; display: flex; gap: 5px">
+          <strong style="font-size: 16px;">Offer Price: </strong>
+          <p style="font-size: 14px; color: #555;">${offerPrice}</p>
+        </div>
+        <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px; display: flex; gap: 5px">
+          <strong style="font-size: 16px;">Offer Unit: </strong>
+          <p style="font-size: 14px; color: #555;">${priceUnit}</p>
+        </div>
+        <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px; display: flex; gap: 5px">
+          <strong style="font-size: 16px;">Offer Note: </strong>
+          <p style="font-size: 14px; color: #555;">${offerNote}</p>
+        </div>
+        <p style="font-size: 14px; color: #777;">Please login to your account to reply to this message.</p>
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
+      `,
+    },
+  };
+
+  const emailBody = mailGenerator.generate(emailTemplate);
+  const mailOptions = {
+    from: EMAIL,
+    to: email,
+    subject: subject,
+    html: emailBody,
+  };
+  await transporter.sendMail(mailOptions);
 }
 
 // offer review request
