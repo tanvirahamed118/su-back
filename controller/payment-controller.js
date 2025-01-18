@@ -124,6 +124,52 @@ async function createMembershipPayment(req, res) {
   }
 }
 
+// create membership payment
+async function createdemoPayment(req, res) {
+  const { title, _id, currentPrice } = req.body;
+  const item = req.body;
+  try {
+    let transactionService = new Wallee.api.TransactionService(config);
+    let transactionPaymentPageService =
+      new Wallee.api.TransactionPaymentPageService(config);
+    let lineItem = new Wallee.model.LineItemCreate();
+    lineItem.name = title;
+    lineItem.uniqueId = generateUniqueId();
+    lineItem.sku = _id;
+    lineItem.quantity = 1;
+    lineItem.amountIncludingTax = currentPrice;
+    lineItem.type = Wallee.model.LineItemType.PRODUCT;
+    let transaction = new Wallee.model.TransactionCreate();
+    transaction.lineItems = [lineItem];
+    transaction.autoConfirmationEnabled = true;
+    transaction.currency = "CHF";
+    transaction.failedUrl = `${baseURL}/seller-dashboard/payment-fail`;
+    transaction.successUrl = `${baseURL}/seller-dashboard/payment-success`;
+    const transactionResponse = await transactionService.create(
+      spaceId,
+      transaction
+    );
+    let transactionCreate = transactionResponse.body;
+
+    const paymentPageResponse =
+      await transactionPaymentPageService.paymentPageUrl(
+        spaceId,
+        transactionCreate.id
+      );
+    await TransactionModel.create({
+      transactionId: transactionCreate.id,
+      memberShip: item,
+      cost: currentPrice,
+      status: "pending",
+    });
+
+    let pageUrl = paymentPageResponse.body;
+    return res.status(200).json({ pageUrl: pageUrl });
+  } catch (error) {
+    return res.status(500).json({ message: "Server Error!", error });
+  }
+}
+
 // create credit payment
 async function createCreditsPayment(req, res) {
   const { id, credit, price, sellerId } = req.body;
@@ -325,7 +371,7 @@ async function sendEmailNotification(name, email, subject, message, introMSG) {
     theme: "default",
     product: {
       name: "Suisse-Offerten",
-      link: "http://suisse-offerten.ch/",
+      link: "https://suisse-offerten.ch/",
     },
   });
   const emailTemplate = {
@@ -365,4 +411,5 @@ module.exports = {
   getAllTransactions,
   createMembershipTransaction,
   createCreditTransaction,
+  createdemoPayment,
 };

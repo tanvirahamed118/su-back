@@ -20,6 +20,66 @@ async function getAllReviewsDefault(req, res) {
   }
 }
 
+// get all review by sellerId by admin
+async function getAllReviewBySellerAdmin(req, res) {
+  try {
+    const { page = 1, limit = 20, sellerId, status } = req.query;
+    const pageNumber = parseInt(page);
+    const limitNumber = parseInt(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+    const filter = {};
+    if (sellerId) {
+      filter.sellerId = sellerId;
+    }
+    if (status) {
+      filter.status = status;
+    }
+    const reviews = await ReviewModel.find(filter)
+      .skip(skip)
+      .limit(limitNumber);
+    const totalreviews = await ReviewModel.countDocuments(filter);
+    const totalPages = Math.ceil(totalreviews / limitNumber);
+    res.status(200).json({
+      currentPage: pageNumber,
+      totalPages,
+      totalreviews,
+      reviews,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error!", error });
+  }
+}
+
+// get all review by clientid by admin
+async function getAllReviewByClientAdmin(req, res) {
+  try {
+    const { page = 1, limit = 20, clientId, status } = req.query;
+    const pageNumber = parseInt(page);
+    const limitNumber = parseInt(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+    const filter = {};
+    if (clientId) {
+      filter.clientId = clientId;
+    }
+    if (status) {
+      filter.status = status;
+    }
+    const reviews = await ReviewModel.find(filter)
+      .skip(skip)
+      .limit(limitNumber);
+    const totalreviews = await ReviewModel.countDocuments(filter);
+    const totalPages = Math.ceil(totalreviews / limitNumber);
+    res.status(200).json({
+      currentPage: pageNumber,
+      totalPages,
+      totalreviews,
+      reviews,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error!", error });
+  }
+}
+
 // get all review
 async function getAllReview(req, res) {
   try {
@@ -186,7 +246,7 @@ async function sendEmailNotification(
     theme: "default",
     product: {
       name: "Suisse-Offerten",
-      link: "http://suisse-offerten.ch/",
+      link: "https://suisse-offerten.ch/",
     },
   });
 
@@ -324,4 +384,6 @@ module.exports = {
   getAllReviewByAdmin,
   updateReviewStatus,
   getAllReviewsDefault,
+  getAllReviewBySellerAdmin,
+  getAllReviewByClientAdmin,
 };

@@ -184,7 +184,7 @@ async function sendVerificationEmail(companyName, email, token) {
     theme: "default",
     product: {
       name: `Suisse-Offerten`,
-      link: "http://suisse-offerten.ch/",
+      link: "https://suisse-offerten.ch/",
     },
   });
   const emailTemplate = {
@@ -330,7 +330,7 @@ async function otpSend(req, res) {
         theme: "default",
         product: {
           name: "Suisse-Offerten",
-          link: "http://suisse-offerten.ch/",
+          link: "https://suisse-offerten.ch/",
         },
       });
       let response = {
@@ -685,6 +685,110 @@ async function updateSellerCompany(req, res) {
   }
 }
 
+// update seller by admin
+async function updateSellerByAdmin(req, res) {
+  const {
+    companyName,
+    UIDNumber,
+    phone,
+    email,
+    username,
+    person,
+    credits,
+    director,
+    dirfirstname,
+    dirlastname,
+    firstName,
+    lastName,
+    foundingYear,
+    iban,
+    leagalForm,
+    location,
+    postalCode,
+    salutation,
+    streetNo,
+    secondPhone,
+    website,
+    companyDescription,
+    companyTitle,
+  } = req.body;
+  const id = req.params.id;
+
+  try {
+    const existSeller = await SellerModel.findById(id);
+    if (!existSeller) {
+      return res.status(400).json({ message: "Data Not Found" });
+    }
+    const basePath = `${req.protocol}://${req.get("host")}/public/uploads/`;
+
+    const companyLogo = req.files?.companyLogo?.[0]?.originalname
+      ?.split(" ")
+      .join("-");
+    const companyCover = req.files?.companyCover?.[0]?.originalname
+      ?.split(" ")
+      .join("-");
+
+    const updateSeller = {
+      companyName,
+      UIDNumber,
+      phone,
+      email,
+      username,
+      person,
+      credits,
+      director,
+      dirfirstname,
+      dirlastname,
+      firstName,
+      lastName,
+      foundingYear,
+      iban,
+      leagalForm,
+      location,
+      postalCode,
+      salutation,
+      streetNo,
+      secondPhone,
+      website,
+      companyDescription,
+      companyTitle,
+      companyLogo: companyLogo
+        ? `${basePath}${companyLogo}`
+        : existSeller?.companyLogo,
+      companyCover: companyCover
+        ? `${basePath}${companyCover}`
+        : existSeller?.companyCover,
+    };
+
+    // Handle multiple company pictures if provided
+    if (req.files?.companyPictures && req.files.companyPictures.length > 0) {
+      updateSeller.companyPictures = req.files.companyPictures.map(
+        (file) => `${basePath}${file.originalname.split(" ").join("-")}`
+      );
+    }
+
+    await SellerModel.findByIdAndUpdate(id, updateSeller, { new: true });
+    res.status(200).json({ message: "Update Successful" });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error!", error });
+  }
+}
+
+// update seller credits
+async function updateSellerCredits(req, res) {
+  const { credits } = req.body;
+  const id = req.params.id;
+  try {
+    const updateSeller = {
+      credits,
+    };
+    await SellerModel.findByIdAndUpdate(id, updateSeller, { new: true });
+    res.status(200).json({ message: "Update Successful" });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error!", error });
+  }
+}
+
 // update seller activity
 async function updateSellerActivity(req, res) {
   const { activities, locations, categoryCode, categories } = req.body;
@@ -698,6 +802,30 @@ async function updateSellerActivity(req, res) {
         preference: [...locations],
         categories: [...categories],
         categoryCode: [...categoryCode],
+      };
+      await SellerModel.findByIdAndUpdate(id, newSellerActivity, {
+        new: true,
+      });
+      res.status(200).json({ message: "Activity Saved" });
+    } else {
+      res.status(400).json({ message: "Data Not Found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Server Error!", error });
+  }
+}
+
+// update seller activity
+async function updateSellerActivityByAdmin(req, res) {
+  const { activities, locations } = req.body;
+  const { id } = req.params;
+
+  const existSeller = await SellerModel.findOne({ _id: id });
+  try {
+    if (existSeller) {
+      const newSellerActivity = {
+        activities: [...activities],
+        preference: [...locations],
       };
       await SellerModel.findByIdAndUpdate(id, newSellerActivity, {
         new: true,
@@ -825,6 +953,67 @@ async function uploadSellerAddress(req, res) {
   }
 }
 
+// send reset password link
+async function sendResetPasswordLink(req, res) {
+  const { email } = req.body;
+  try {
+    const existSeller = await SellerModel.findOne({ email: email });
+    if (existSeller) {
+      let config = {
+        service: "gmail",
+        auth: {
+          user: EMAIL,
+          pass: PASSWORD,
+        },
+      };
+      let transport = nodemailer.createTransport(config);
+      let mailGenarator = new Mailgen({
+        theme: "default",
+        product: {
+          name: "Suisse-Offerten",
+          link: "https://suisse-offerten.ch/",
+        },
+      });
+      let response = {
+        body: {
+          name: existSeller?.email,
+          intro: "Change your password",
+          table: {
+            data: [
+              {
+                Message: `Hello, If you don't remember your password and you did not get any email to reset password, you can use this like to reset your password. Link: https://suisse-offerten.ch/seller-change-password`,
+              },
+            ],
+          },
+          outro: `<p style="font-size: 14px; color: #777;">Please check your email, you have receive reset password link</p>
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>`,
+        },
+      };
+      let mail = await mailGenarator.generate(response);
+      let message = {
+        from: EMAIL,
+        to: req.body.email,
+        subject: "Change Password Link",
+        html: mail,
+      };
+      transport.sendMail(message).then(() => {
+        return res.status(200).json({
+          email: email,
+          message: "Link Send Successful",
+          status: "ok",
+        });
+      });
+    } else {
+      res.status(400).json({ message: "Data Not Found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Server Error!", error });
+  }
+}
+
 module.exports = {
   getAllSeller,
   getOneSeller,
@@ -845,4 +1034,8 @@ module.exports = {
   deleteSellerCompanyPictures,
   uploadSellerAddress,
   changePasswordBySeller,
+  updateSellerByAdmin,
+  sendResetPasswordLink,
+  updateSellerCredits,
+  updateSellerActivityByAdmin,
 };

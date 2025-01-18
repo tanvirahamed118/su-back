@@ -7,10 +7,12 @@ const {
   updateMembership,
   deleteMembership,
   cancelMembership,
+  getAllMembershipByAdmin,
 } = require("../controller/membership-controller");
 const auth = require("../middlewares/auth");
 
-router.get("/", auth, getAllMembership);
+router.get("/admin", auth, getAllMembershipByAdmin);
+router.get("/", getAllMembership);
 router.get("/:id", auth, getOneMembership);
 router.post("/", auth, createMembership);
 router.patch("/cancel/:id", auth, cancelMembership);

@@ -16,6 +16,7 @@ const paymentRouter = require("./routes/payment-router");
 const offerRouter = require("./routes/offer-router");
 const membershipRouter = require("./routes/membership-router");
 const adminRouter = require("./routes/admin-router");
+const creditRouter = require("./routes/credit-router");
 const CORS_URL = process.env.CORS_URL;
 const DASHBOARD_URL = process.env.DASHBOARD_URL;
 const allowedOrigins = [CORS_URL, DASHBOARD_URL];
@@ -56,6 +57,7 @@ app.use("/auth/payment", paymentRouter);
 app.use("/auth/offer", offerRouter);
 app.use("/auth/membership", membershipRouter);
 app.use("/auth/admin", adminRouter);
+app.use("/auth/credit", creditRouter);
 
 // Home Route
 app.get("/", auth, (req, res) => {

@@ -18,10 +18,13 @@ const {
   offerReviewRequest,
   offerArchiveRequest,
   getAllOfferBySellerBoth,
+  getAllOfferByAdmin,
+  deleteOffer,
 } = require("../controller/offer-controller");
 const auth = require("../middlewares/auth");
 const offerFiles = require("../middlewares/offerFiles");
 
+router.get("/admin", auth, getAllOfferByAdmin);
 router.get("/default", auth, getAllOfferDefault);
 router.get("/both", auth, getOneOfferByBoth);
 router.get("/client", auth, getAllOfferByClient);
@@ -39,7 +42,6 @@ router.patch("/details/:id", auth, offerFiles, updateOfferDetails);
 router.patch("/view", auth, updateOfferView);
 router.patch("/send/proposal", auth, offerFiles, sendBidRequest);
 router.patch("/status/:id", auth, updateOfferRequest);
-
-router.delete("/:id", auth, createOffer);
+router.delete("/:id", auth, deleteOffer);
 
 module.exports = router;

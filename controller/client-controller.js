@@ -39,22 +39,14 @@ async function getAllClientsByAdmin(req, res) {
     const clients = await ClientModel.find(filter)
       .skip(skip)
       .limit(limitNumber);
-    const updatedClients = await Promise.all(
-      clients.map(async (client) => {
-        const jobCount = await JobModel.countDocuments({
-          jobEmail: client.email,
-        });
-        client.createdJobs = jobCount;
-        return client;
-      })
-    );
+
     const totalClients = await ClientModel.countDocuments(filter);
     const totalPages = Math.ceil(totalClients / limitNumber);
     res.status(200).json({
       currentPage: pageNumber,
       totalPages,
       totalClients,
-      clients: updatedClients,
+      clients: clients,
     });
   } catch (error) {
     res.status(500).json({ message: "Server Error!", error });
@@ -163,7 +155,7 @@ async function sendVerificationCode(companyName, email) {
     theme: "default",
     product: {
       name: `Suisse-Offerten`,
-      link: "http://suisse-offerten.ch/",
+      link: "https://suisse-offerten.ch/",
     },
   });
   const emailTemplate = {
@@ -269,7 +261,7 @@ async function sendJobEmails(
     theme: "default",
     product: {
       name: "Suiess-offerten",
-      link: "http://suisse-offerten.ch/",
+      link: "https://suisse-offerten.ch/",
     },
   });
   for (let i = 0; i < sellerNames.length; i++) {
@@ -405,7 +397,7 @@ async function otpSend(req, res) {
         theme: "default",
         product: {
           name: "suisse-offerten",
-          link: "http://suisse-offerten.ch/",
+          link: "https://suisse-offerten.ch/",
         },
       });
       let response = {
@@ -642,6 +634,67 @@ async function createClientByAdmin(req, res) {
   }
 }
 
+// send reset password link
+async function sendResetPasswordLink(req, res) {
+  const { email } = req.body;
+  try {
+    const existSeller = await ClientModel.findOne({ email: email });
+    if (existSeller) {
+      let config = {
+        service: "gmail",
+        auth: {
+          user: EMAIL,
+          pass: PASSWORD,
+        },
+      };
+      let transport = nodemailer.createTransport(config);
+      let mailGenarator = new Mailgen({
+        theme: "default",
+        product: {
+          name: "Suisse-Offerten",
+          link: "https://suisse-offerten.ch/",
+        },
+      });
+      let response = {
+        body: {
+          name: existSeller?.email,
+          intro: "Change your password",
+          table: {
+            data: [
+              {
+                Message: `Hello, If you don't remember your password and you did not get any email to reset password, you can use this like to reset your password. Link: https://suisse-offerten.ch/client-change-password`,
+              },
+            ],
+          },
+          outro: `<p style="font-size: 14px; color: #777;">Please check your email, you have receive reset password link</p>
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>`,
+        },
+      };
+      let mail = await mailGenarator.generate(response);
+      let message = {
+        from: EMAIL,
+        to: req.body.email,
+        subject: "Change Password Link",
+        html: mail,
+      };
+      transport.sendMail(message).then(() => {
+        return res.status(200).json({
+          email: email,
+          message: "Link Send Successful",
+          status: "ok",
+        });
+      });
+    } else {
+      res.status(400).json({ message: "Data Not Found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Server Error!", error });
+  }
+}
+
 module.exports = {
   getClient,
   getClientById,
@@ -659,4 +712,5 @@ module.exports = {
   updateClientStatusByAdmin,
   createClientByAdmin,
   changePasswordByClient,
+  sendResetPasswordLink,
 };

@@ -1,4 +1,6 @@
 const ContactModel = require("../models/contact-model");
+const SellerModel = require("../models/seller-model");
+const ClientModel = require("../models/client-model");
 const EMAIL = process.env.EMAIL;
 const PASSWORD = process.env.PASSWORD;
 const nodemailer = require("nodemailer");
@@ -22,6 +24,58 @@ async function getAllContact(req, res) {
       .skip(skip)
       .limit(limitNumber);
     const totalEmails = await ContactModel.countDocuments(filter);
+    const totalPages = Math.ceil(totalEmails / limitNumber);
+    res.status(200).json({
+      currentPage: pageNumber,
+      totalPages,
+      totalEmails,
+      emails,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error!", error });
+  }
+}
+
+// Get All seller emails
+async function getAllSellerEmails(req, res) {
+  try {
+    const { page = 1, limit = 20, location, activitie } = req.query;
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    const skip = (pageNumber - 1) * limitNumber;
+
+    const filter = {};
+    if (location && location.trim()) {
+      filter.activities = { $in: [location] };
+    }
+    if (activitie && activitie.trim()) {
+      filter.preference = { $in: [activitie] };
+    }
+
+    const emails = await SellerModel.find(filter).skip(skip).limit(limitNumber);
+    const totalEmails = await SellerModel.countDocuments(filter);
+    const totalPages = Math.ceil(totalEmails / limitNumber);
+
+    res.status(200).json({
+      currentPage: pageNumber,
+      totalPages,
+      totalEmails,
+      emails,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error!", error });
+  }
+}
+
+// Get All client emails
+async function getAllClientEmails(req, res) {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    const skip = (pageNumber - 1) * limitNumber;
+    const emails = await ClientModel.find().skip(skip).limit(limitNumber);
+    const totalEmails = await ClientModel.countDocuments();
     const totalPages = Math.ceil(totalEmails / limitNumber);
     res.status(200).json({
       currentPage: pageNumber,
@@ -84,13 +138,13 @@ async function createContact(req, res) {
       theme: "default",
       product: {
         name: "Suiess-offerten",
-        link: "http://suisse-offerten.ch/",
+        link: "https://suisse-offerten.ch/",
       },
     });
 
     let response = {
       body: {
-        name: name,
+        name: "Cheaf",
         intro: `Message from ${email}`,
         outro: `
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
@@ -117,7 +171,6 @@ async function createContact(req, res) {
           <strong style="font-size: 16px;">Request Creator Notice:</strong>
           <p style="font-size: 14px; color: #555;">${notice}</p>
         </div>
-        <p style="font-size: 14px; color: #777;">Thanks for make a request, we will contact you shortly.</p>
         <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
         <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
@@ -129,7 +182,7 @@ async function createContact(req, res) {
     let message = {
       from: email,
       to: EMAIL,
-      subject: email,
+      subject: "You have received a message from contact us page",
       html: mail,
     };
 
@@ -217,4 +270,6 @@ module.exports = {
   deleteContact,
   updateContactStatus,
   getAllContactDefault,
+  getAllSellerEmails,
+  getAllClientEmails,
 };

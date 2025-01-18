@@ -97,7 +97,7 @@ async function getJobsByCategory(req, res) {
 // get all jobs by client
 async function getAllJobByClient(req, res) {
   try {
-    const { page, limit, email } = req.query;
+    const { page, limit, email, status } = req.query;
     const pageNumber = parseInt(page, 10);
     const limitNumber = parseInt(limit, 10);
     const skip = (pageNumber - 1) * limitNumber;
@@ -105,6 +105,9 @@ async function getAllJobByClient(req, res) {
 
     if (email) {
       filter.jobEmail = email;
+    }
+    if (status) {
+      filter.status = status;
     }
     const jobs = await JobModel.find(filter).skip(skip).limit(limitNumber);
     const totalJobs = await JobModel.countDocuments(filter);
@@ -209,6 +212,7 @@ async function createJob(req, res) {
   try {
     let email;
     let jobUsername;
+    let countJob;
     let clientEmail = await ClientModel.findOne({ email: jobEmail });
     let clientUsername = await ClientModel.findOne({ username: username });
     let sellerEmail = await SellerModel.findOne({ email: jobEmail });
@@ -235,10 +239,11 @@ async function createJob(req, res) {
     if (jobEmail) {
       email = jobEmail;
       jobUsername = username;
+      countJob = jobEmail.createdJobs;
     } else {
       let clientEmail = await ClientModel.findOne({ _id: clinetId });
       email = clientEmail.email;
-
+      countJob = clientEmail.createdJobs;
       jobUsername = clientEmail.username;
     }
     let file = [];
@@ -260,16 +265,7 @@ async function createJob(req, res) {
     const uniqueNumber = generateNum(100000, 10000000);
     const sellerEmails = matchingSellers.map((seller) => seller.email);
     const sellerNames = matchingSellers.map((seller) => seller.username);
-    if (sellerEmails.length > 0 && clinetId) {
-      await sendJobEmails(
-        sellerEmails,
-        jobTitle,
-        jobDescription,
-        jobLocation,
-        uniqueNumber,
-        sellerNames
-      );
-    }
+
     const job = new JobModel({
       jobTitle,
       jobCity,
@@ -291,7 +287,16 @@ async function createJob(req, res) {
       jobCategoryId,
     });
     await job.save();
-
+    if (sellerEmails.length > 0 && clinetId) {
+      await sendJobEmails(
+        sellerEmails,
+        jobTitle,
+        jobDescription,
+        jobLocation,
+        uniqueNumber,
+        sellerNames
+      );
+    }
     if (!clinetId) {
       bcrypt.hash(password, 10, async function (err, hash) {
         const client = new ClientModel({
@@ -301,6 +306,7 @@ async function createJob(req, res) {
           firstname,
           lastname,
           phone,
+          createdJobs: countJob > 0 ? countJob + 1 : 0,
         });
         await client.save();
         sendVerificationCode(username, email);
@@ -332,11 +338,13 @@ async function sendJobEmails(
       pass: PASSWORD,
     },
   });
+  const existJob = await JobModel.findOne({ jobNumber: uniqueNumber });
+  const id = existJob?._id;
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
       name: "Suiess-offerten",
-      link: "http://suisse-offerten.ch/",
+      link: "https://suisse-offerten.ch/",
     },
   });
   for (let i = 0; i < sellerNames.length; i++) {
@@ -362,7 +370,7 @@ async function sendJobEmails(
           <strong style="font-size: 16px;">Job Number:</strong>
           <p style="font-size: 14px; color: #555;">${uniqueNumber}</p>
         </div>
-        <p style="font-size: 14px; color: #777;">Visit this link to see recent jobs <a href="${corsUrl}/search-job">See jobs</a></p>
+        <p style="font-size: 14px; color: #777;">Visit this link to see recent jobs <a href="${corsUrl}/search-job/${id}">See jobs</a></p>
        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
         <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
@@ -463,7 +471,7 @@ async function CheckClient(req, res) {
         theme: "default",
         product: {
           name: "Suisse-Offerten",
-          link: "http://suisse-offerten.ch/",
+          link: "https://suisse-offerten.ch/",
         },
       });
       let response = {
@@ -515,7 +523,7 @@ async function CheckClient(req, res) {
         theme: "default",
         product: {
           name: "Suisse-Offerten",
-          link: "http://suisse-offerten.ch/",
+          link: "https://suisse-offerten.ch/",
         },
       });
       let response = {

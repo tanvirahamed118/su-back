@@ -28,7 +28,14 @@ async function getOneOfferByJobId(req, res) {
   const { sellerId } = req.query;
   try {
     const Offer = await OfferModel.findOne({ jobId: id, sellerId: sellerId });
-    res.status(200).json(Offer);
+    const seller = await SellerModel.findById(sellerId);
+    const job = await JobModel.findById(id);
+    const enrichedOffer = {
+      ...Offer.toObject(),
+      seller,
+      job,
+    };
+    res.status(200).json(enrichedOffer);
   } catch (error) {
     res.status(500).json({ message: "Server Error!", error });
   }
@@ -61,6 +68,62 @@ async function getAllOffer(req, res) {
     }
     const offers = await OfferModel.find(filter).skip(skip).limit(limitNumber);
 
+    const totalOffers = await OfferModel.countDocuments(filter);
+    const totalPages = Math.ceil(totalOffers / limitNumber);
+    const sellerIds = [...new Set(offers.map((p) => p.sellerId))];
+    const clientIds = [...new Set(offers.map((p) => p.clientId))];
+    const jobIds = [...new Set(offers.map((p) => p.jobId))];
+    const sellers = await SellerModel.find({ _id: { $in: sellerIds } });
+    const clients = await ClientModel.find({ _id: { $in: clientIds } });
+    const jobs = await JobModel.find({ _id: { $in: jobIds } });
+    const sellerDataMap = sellers.reduce((map, item) => {
+      map[item._id.toString()] = item;
+      return map;
+    }, {});
+    const clientDataMap = clients.reduce((map, item) => {
+      map[item._id.toString()] = item;
+      return map;
+    }, {});
+    const jobMap = jobs.reduce((map, item) => {
+      map[item._id.toString()] = item;
+      return map;
+    }, {});
+
+    const detailedParticipations = offers.map((participation) => ({
+      ...participation._doc,
+      sellerData: sellerDataMap[participation.sellerId.toString()] || null,
+      clientData: clientDataMap[participation.clientId.toString()] || null,
+      jobData: jobMap[participation.jobId.toString()] || null,
+    }));
+
+    res.status(200).json({
+      currentPage: pageNumber,
+      totalPages,
+      totalOffers,
+      offers: detailedParticipations,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error!", error });
+  }
+}
+
+// get all offer by admin
+async function getAllOfferByAdmin(req, res) {
+  try {
+    const { page = 1, limit = 20, status = "", jobId = "" } = req.query;
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    const skip = (pageNumber - 1) * limitNumber;
+    const filter = {};
+
+    if (status) {
+      filter.status = status;
+    }
+    if (jobId) {
+      filter.jobId = jobId;
+    }
+
+    const offers = await OfferModel.find(filter).skip(skip).limit(limitNumber);
     const totalOffers = await OfferModel.countDocuments(filter);
     const totalPages = Math.ceil(totalOffers / limitNumber);
     const sellerIds = [...new Set(offers.map((p) => p.sellerId))];
@@ -313,8 +376,8 @@ async function createPerticipation(req, res) {
   const email = existJob?.jobEmail;
   const existClient = await ClientModel.findOne({ email: email });
   const existoffer = await OfferModel.findOne({ jobId: jobId });
-  const { username, credits } = existSeller || {};
-  const { _id } = existClient || {};
+  const { credits, username } = existSeller || {};
+  const { _id, firstname } = existClient || {};
   const { jobTitle, placeBid } = existJob || {};
 
   try {
@@ -353,7 +416,7 @@ async function createPerticipation(req, res) {
         placeBid: bid,
       };
       await sendEmailNotification(
-        username,
+        firstname,
         email,
         `You have received a new request from ${username}`,
         `${username} send a request to your job: ${jobTitle}. Please check your dashboard to see the perticipation.`,
@@ -381,7 +444,7 @@ async function makeOfferRequest(req, res) {
   const { jobId, sellerId, offerMessage } = req.body;
   const id = req.params.id;
   const existSeller = await SellerModel.findOne({ _id: sellerId });
-  const { email } = existSeller || {};
+  const { email, firstName } = existSeller || {};
   const existJob = await JobModel.findOne({ _id: jobId });
   const clientEmail = existJob?.jobEmail;
   const existClient = await ClientModel.findOne({ email: clientEmail });
@@ -390,7 +453,7 @@ async function makeOfferRequest(req, res) {
     sellerId: sellerId,
   });
 
-  const { firstname, lastname } = existClient || {};
+  const { firstname } = existClient || {};
   const { jobTitle } = existJob || {};
   try {
     const requestData = {
@@ -418,18 +481,14 @@ async function makeOfferRequest(req, res) {
         { new: true }
       );
       await sendEmailNotification(
-        firstname + " " + lastname,
+        firstName,
         email,
-        `${firstname + " " + lastname} send offer request`,
-        `${
-          firstname + " " + lastname
-        } ask you to make offer to this job: ${jobTitle}. Please login to your dashboard and make a offer request. ${
+        `${firstname} send offer request`,
+        `${firstname} ask you to make offer to this job: ${jobTitle}. Please login to your dashboard and make a offer request. ${
           offerMessage &&
-          `<p style="font-weight: bold; color: #777; font-size: 18px">${
-            firstname + " " + lastname
-          } Message: </p>${offerMessage}`
+          `<p style="font-weight: bold; color: #777; font-size: 18px">${firstname} Message: </p>${offerMessage}`
         }`,
-        firstname + " " + lastname
+        firstname
       );
       await OfferModel.findByIdAndUpdate(id, requestData, { new: true });
     }
@@ -739,7 +798,7 @@ async function sendBidEmail(
     theme: "default",
     product: {
       name: "Suisse-Offerten",
-      link: "http://suisse-offerten.ch/",
+      link: "https://suisse-offerten.ch/",
     },
   });
   const emailTemplate = {
@@ -800,7 +859,7 @@ async function updateOfferView(req, res) {
 
 // update offer details
 async function updateOfferDetails(req, res) {
-  const { offerPrice, priceUnit, offerNote } = req.body;
+  const { offerPrice, priceUnit, offerNote, status } = req.body;
   const id = req.params.id;
   const existOffer = await OfferModel.findOne({ _id: id });
   const { jobId, sellerId } = existOffer || {};
@@ -822,13 +881,14 @@ async function updateOfferDetails(req, res) {
       priceUnit,
       offerNote,
       offerFiles: offerFiles,
+      status: status && status,
     };
     if (existCommunication) {
       let updateData = { $push: {} };
       updateData.$push.sellerMessage = {
-        message: `<strong>UPDATED:</strong> Price Unit: ${priceUnit}\n Offer Price: ${offerPrice}\n Offer Note: ${offerNote}${
+        message: `<strong>UPDATED:</strong>\n Price Unit: ${priceUnit}\n Offer Price: ${offerPrice}\n Offer Note: ${offerNote}${
           req.file
-            ? `Offer File: <a style="color: #777; font-weight: bold;" href="${offerFiles}" download>Download offer file</a>`
+            ? `\n Offer File: <br> <a style="color: #777; font-weight: bold;" href="${offerFiles}" download>Download offer file</a>`
             : ""
         }`,
         date: new Date(),
@@ -881,7 +941,7 @@ async function updateBidEmail(
     theme: "default",
     product: {
       name: "Suisse-Offerten",
-      link: "http://suisse-offerten.ch/",
+      link: "https://suisse-offerten.ch/",
     },
   });
   const emailTemplate = {
@@ -924,12 +984,26 @@ async function updateBidEmail(
 async function offerReviewRequest(req, res) {
   const { id } = req.params;
   try {
-    let existProposal = await OfferModel.findOne({ _id: id });
-    if (existProposal) {
+    let existOffer = await OfferModel.findOne({ _id: id });
+    const { jobId, sellerId } = existOffer || {};
+    const existSeller = await SellerModel.findOne({ _id: sellerId });
+    const { username } = existSeller || {};
+    const existJob = await JobModel.findOne({ _id: jobId });
+    const { jobTitle, jobEmail } = existJob || {};
+    const existClient = await ClientModel.findOne({ email: jobEmail });
+    const { firstname, email } = existClient || {};
+    if (existOffer) {
       let updateData = {
         reviewRequest: true,
       };
       await OfferModel.findByIdAndUpdate(id, updateData, { new: true });
+      await sendEmailNotification(
+        firstname,
+        email,
+        `${username} send review request`,
+        `${username} ask you to given a review and share your experience. Please login to your dashboard and wirte a review.  <p style="font-weigth: bold; font-size: 14px; color: #555;">job title: ${jobTitle}</p>`,
+        username
+      );
       res.status(200).json({ message: "Review Request Send" });
     } else {
       res.status(400).json("Data not found");
@@ -977,7 +1051,7 @@ async function sendEmailNotification(
     theme: "default",
     product: {
       name: "Suisse-Offerten",
-      link: "http://suisse-offerten.ch/",
+      link: "https://suisse-offerten.ch/",
     },
   });
   const emailTemplate = {
@@ -1008,6 +1082,82 @@ async function sendEmailNotification(
   await transporter.sendMail(mailOptions);
 }
 
+// delete offer
+async function deleteOffer(req, res) {
+  const { id } = req.params;
+  const existOffer = await OfferModel.findById(id);
+  const { sellerId, jobId } = existOffer || {};
+  const existSeller = await SellerModel.findById(sellerId);
+  const { email, username } = existSeller || {};
+  const existCommunication = await CommunicationModel.findOne({
+    jobId: jobId,
+    sellerId: sellerId,
+  });
+  const existJob = await JobModel.findOne({ _id: jobId });
+  const { _id, placeBid } = existJob || {};
+  try {
+    await sendDeleteEmail(
+      username,
+      email,
+      "Your Offer has been deleted",
+      "Suisse Offerten Team"
+    );
+    const updateJob = {
+      placeBid: placeBid > 0 ? placeBid - 1 : 0,
+    };
+    await JobModel.findByIdAndUpdate(_id, updateJob, { new: true });
+    await CommunicationModel.findByIdAndDelete(existCommunication?._id);
+    await OfferModel.findByIdAndDelete(id);
+    res.status(200).json({ message: "Delete Successful" });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error!", error });
+  }
+}
+
+// send notification email
+async function sendDeleteEmail(name, email, subject, receiveName) {
+  const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+      user: EMAIL,
+      pass: PASSWORD,
+    },
+  });
+  const mailGenerator = new Mailgen({
+    theme: "default",
+    product: {
+      name: "Suisse-Offerten",
+      link: "https://suisse-offerten.ch/",
+    },
+  });
+  const emailTemplate = {
+    body: {
+      name: `${name}`,
+      intro: `You have received a new message from ${receiveName}:`,
+      outro: `
+        <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
+          <strong style="font-size: 16px;">Message:</strong>
+          <p style="font-size: 14px; color: #555;">Your offer has voided our terms and policy. So, we regret to inform you that your offer and all communications has been deleted by the Swisse 0fferten team.</p>
+        </div>
+        <p style="font-size: 14px; color: #777;">If you have any questions or queries, please contact our support team.</p>
+        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
+      `,
+    },
+  };
+  emailTemplate.body.message = `Your offer has voided our terms and policy. So, we regret to inform you that your offer and all communications has been deleted by the Swisse 0fferten team.`;
+  const emailBody = mailGenerator.generate(emailTemplate);
+  const mailOptions = {
+    from: EMAIL,
+    to: email,
+    subject: subject,
+    html: emailBody,
+  };
+  await transporter.sendMail(mailOptions);
+}
+
 module.exports = {
   getAllOffer,
   createOffer,
@@ -1026,4 +1176,6 @@ module.exports = {
   updateOfferDetails,
   offerReviewRequest,
   offerArchiveRequest,
+  getAllOfferByAdmin,
+  deleteOffer,
 };

@@ -189,7 +189,7 @@ async function otpSend(req, res) {
         theme: "default",
         product: {
           name: "suisse-offerten",
-          link: "http://suisse-offerten.ch/",
+          link: "https://suisse-offerten.ch/",
         },
       });
       let response = {

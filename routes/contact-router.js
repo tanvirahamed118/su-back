@@ -8,11 +8,15 @@ const {
   deleteContact,
   getAllContactDefault,
   updateContactStatus,
+  getAllSellerEmails,
+  getAllClientEmails,
 } = require("../controller/contact-controller");
 const auth = require("../middlewares/auth");
 
 router.get("/", auth, getAllContact);
 router.get("/default", auth, getAllContactDefault);
+router.get("/seller", auth, getAllSellerEmails);
+router.get("/client", auth, getAllClientEmails);
 router.get("/:id", auth, getSingleContact);
 router.post("/", createContact);
 router.patch("/status", auth, updateContactStatus);

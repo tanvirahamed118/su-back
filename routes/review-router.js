@@ -11,11 +11,15 @@ const {
   getAllReviewByAdmin,
   updateReviewStatus,
   getAllReviewsDefault,
+  getAllReviewBySellerAdmin,
+  getAllReviewByClientAdmin,
 } = require("../controller/review-controller");
 const auth = require("../middlewares/auth");
 
 router.get("/", getAllReview);
 router.get("/default", auth, getAllReviewsDefault);
+router.get("/seller/admin", auth, getAllReviewBySellerAdmin);
+router.get("/client/admin", auth, getAllReviewByClientAdmin);
 router.get("/admin", auth, getAllReviewByAdmin);
 router.get("/:id", auth, getUserReview);
 router.get("/single/:id", auth, getsingleReview);

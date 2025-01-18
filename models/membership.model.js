@@ -41,6 +41,9 @@ const membershipSchema = mongoose.Schema(
     featureFive: {
       type: String,
     },
+    status: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

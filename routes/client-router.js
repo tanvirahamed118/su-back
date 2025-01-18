@@ -17,6 +17,7 @@ const {
   updateClientStatusByAdmin,
   createClientByAdmin,
   changePasswordByClient,
+  sendResetPasswordLink,
 } = require("../controller/client-controller");
 const auth = require("../middlewares/auth");
 
@@ -30,6 +31,7 @@ router.post("/verify/check", VerifyCodeCheck);
 router.post("/login", login);
 router.post("/otp", otpSend);
 router.post("/otp/check", otpCheck);
+router.post("/admin/send", sendResetPasswordLink);
 router.post("/change", changePassword);
 router.patch("/change/password/:id", changePasswordByClient);
 router.patch("/access/admin", auth, updateClientStatusByAdmin);

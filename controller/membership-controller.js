@@ -22,6 +22,34 @@ async function getAllMembership(req, res) {
   }
 }
 
+// get all Membership By Admin
+async function getAllMembershipByAdmin(req, res) {
+  try {
+    const { page = 1, limit = 20, status } = req.query;
+    const pageNumber = parseInt(page);
+    const limitNumber = parseInt(limit);
+    const skip = (pageNumber - 1) * limitNumber;
+    const filter = {};
+    if (status) {
+      filter.status = status;
+    }
+
+    const memberships = await MembershipModel.find(filter)
+      .skip(skip)
+      .limit(limitNumber);
+    const totalMemberships = await MembershipModel.countDocuments(filter);
+    const totalPages = Math.ceil(totalMemberships / limitNumber);
+    res.status(200).json({
+      currentPage: pageNumber,
+      totalPages,
+      totalMemberships,
+      memberships,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
 // create Membership
 async function createMembership(req, res) {
   const {
@@ -37,6 +65,7 @@ async function createMembership(req, res) {
     featureFive,
     credit,
     plan,
+    status,
   } = req.body;
   try {
     const createData = new MembershipModel({
@@ -52,6 +81,7 @@ async function createMembership(req, res) {
       featureFive,
       credit,
       plan,
+      status,
     });
     await createData.save();
     res.status(200).json({ message: "Membership Create Successful" });
@@ -95,11 +125,12 @@ async function updateMembership(req, res) {
     featureThree,
     featureFour,
     featureFive,
+    status,
   } = req.body;
   try {
     const existMembership = await MembershipModel.findOne({ _id: id });
     if (existMembership) {
-      const updateData = new MembershipModel({
+      const updateData = {
         title,
         savePrice,
         existPrice,
@@ -110,7 +141,8 @@ async function updateMembership(req, res) {
         featureThree,
         featureFour,
         featureFive,
-      });
+        status,
+      };
       await MembershipModel.findByIdAndUpdate(id, updateData, {
         new: true,
       });
@@ -147,4 +179,5 @@ module.exports = {
   updateMembership,
   deleteMembership,
   cancelMembership,
+  getAllMembershipByAdmin,
 };

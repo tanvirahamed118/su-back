@@ -249,7 +249,7 @@ async function sendEmailNotification(
     theme: "default",
     product: {
       name: "Suisse-Offerten",
-      link: "http://suisse-offerten.ch/",
+      link: "https://suisse-offerten.ch/",
     },
   });
   const emailTemplate = {
