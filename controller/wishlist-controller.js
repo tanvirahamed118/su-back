@@ -1,5 +1,12 @@
 const WishlistModel = require("../models/wishlist-model");
 const JobModel = require("../models/job-model");
+const {
+  SERVER_ERROR_MESSAGE,
+  ALREADY_SAVE_JOB_MESSAGE,
+  JOB_SAVE_SUCCESS_MESSAGE,
+  DELETE_SUCCESS_MESSAGE,
+  DATA_NOT_FOUND_MESSAGE,
+} = require("../utils/response");
 
 // get all wishlist
 const getAllWishlist = async (req, res) => {
@@ -33,7 +40,7 @@ const getAllWishlist = async (req, res) => {
       wishlists: enrichedWishlists,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 };
 
@@ -52,7 +59,7 @@ const getsingleWishlist = async (req, res) => {
       res.status(200).json({});
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 };
 
@@ -65,7 +72,7 @@ const createWishlist = async (req, res) => {
     jobId: jobId,
   });
   if (exiistWishlist) {
-    return res.status(400).json({ message: "You Have Already Save This Job" });
+    return res.status(400).json({ message: ALREADY_SAVE_JOB_MESSAGE });
   }
   try {
     const wishlistData = new WishlistModel({
@@ -74,9 +81,9 @@ const createWishlist = async (req, res) => {
       status: "saved",
     });
     await wishlistData.save();
-    res.status(200).json({ wishlistData, message: "Job Saved Successful" });
+    res.status(200).json({ wishlistData, message: JOB_SAVE_SUCCESS_MESSAGE });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 };
 
@@ -92,12 +99,12 @@ const updateWishlistStatus = async (req, res) => {
       await WishlistModel.findByIdAndUpdate(id, updateData, {
         new: true,
       });
-      res.status(200).json({ message: "Saved Remove Successful" });
+      res.status(200).json({ message: DELETE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 };
 
@@ -108,12 +115,12 @@ const deleteWishlist = async (req, res) => {
   try {
     if (exiistWishlist) {
       await WishlistModel.findByIdAndDelete(id);
-      res.status(200).json({ message: "Saved Remove Successful" });
+      res.status(200).json({ message: DELETE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 };
 

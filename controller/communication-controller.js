@@ -4,6 +4,24 @@ const ClientModel = require("../models/client-model");
 const JobModel = require("../models/job-model");
 const nodemailer = require("nodemailer");
 const Mailgen = require("mailgen");
+const {
+  SERVER_ERROR_MESSAGE,
+  DATA_NOT_FOUND_MESSAGE,
+  NOT_ELIGABLE_FOR_BID_MESSAGE,
+  ALREADY_SEND_MESSAGE,
+  MESSAGE_SEND_MESSAGE,
+  COMMUNICATION_MARK_SEEN_MESSAGE,
+  DELETE_SUCCESS_MESSAGE,
+} = require("../utils/response");
+const {
+  YOU_HAVE_RECIVE_RESPONSE,
+  NAME_RESPONSE,
+  DOMAIN_URL_RESPONSE,
+  MESSAGE_RESPONSE,
+  LOGIN_TO_REPLY_MESSAGE_RESPONSE,
+  OUTRO_RESPONSE,
+  SINGNATURE_RESPONSE,
+} = require("../utils/email.response");
 const EMAIL = process.env.EMAIL;
 const PASSWORD = process.env.PASSWORD;
 const supportMail = process.env.SUPPORT_MAIL;
@@ -16,7 +34,7 @@ const getAllCommunication = async (req, res) => {
     const communication = await CommunicationModel.find();
     res.status(200).json(communication);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 };
 
@@ -30,7 +48,7 @@ const getAllCommunicationByClient = async (req, res) => {
     const communication = await CommunicationModel.find(filter);
     res.status(200).json(communication);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 };
 
@@ -43,10 +61,10 @@ const getUserCommunication = async (req, res) => {
     if (existCommunication) {
       res.status(200).json(existCommunication);
     } else {
-      res.status(400).json("Data Not Found");
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 };
 
@@ -58,10 +76,10 @@ const getsingleCommunication = async (req, res) => {
     if (existCommunication) {
       res.status(200).json(existCommunication);
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 };
 
@@ -72,7 +90,7 @@ const createCommunication = async (req, res) => {
   const existClient = await ClientModel.findOne({ _id: clientId });
   const collectios = await CommunicationModel.find({ jobId: jobId });
   if (collectios.length >= 5) {
-    return res.status(400).json({ message: "Bidding Are Not Available" });
+    return res.status(400).json({ message: NOT_ELIGABLE_FOR_BID_MESSAGE });
   }
   const existJob = await JobModel.findOne({ _id: jobId });
   const existSellerCom = await CommunicationModel.findOne({
@@ -80,7 +98,7 @@ const createCommunication = async (req, res) => {
     jobId: jobId,
   });
   if (existSellerCom) {
-    return res.status(400).json({ message: "You Have Already Send Message" });
+    return res.status(400).json({ message: ALREADY_SEND_MESSAGE });
   }
   try {
     if (existSeller) {
@@ -118,7 +136,7 @@ const createCommunication = async (req, res) => {
           await sendEmailNotification(
             existClient.username,
             existClient.email,
-            `You have received a new message from ${existSeller.username}`,
+            `${YOU_HAVE_RECIVE_RESPONSE} ${existSeller.username}`,
             sellerMessage,
             existSeller.username
           );
@@ -129,7 +147,7 @@ const createCommunication = async (req, res) => {
           await sendEmailNotification(
             existSeller.username,
             existSeller.email,
-            `You have received a new message from ${existClient.username}`,
+            `${YOU_HAVE_RECIVE_RESPONSE} ${existClient.username}`,
             clientMessage,
             existClient.username
           );
@@ -137,10 +155,10 @@ const createCommunication = async (req, res) => {
       }
       await JobModel.findByIdAndUpdate(jobId, updateJob, { new: true });
       await reviewData.save();
-      res.status(201).json({ message: "Message Sent" });
+      res.status(201).json({ message: MESSAGE_SEND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 };
 
@@ -157,10 +175,10 @@ const updateCommunicationView = async (req, res) => {
     };
     await CommunicationModel.updateMany(filter, updateView);
     res.status(200).json({
-      message: "Communications Marked As Seen",
+      message: COMMUNICATION_MARK_SEEN_MESSAGE,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 };
 
@@ -180,7 +198,7 @@ const updateCommunication = async (req, res) => {
         await sendEmailNotification(
           existClient.username,
           existClient.email,
-          `You have received a new message from ${existSeller.username}`,
+          `${YOU_HAVE_RECIVE_RESPONSE} ${existSeller.username}`,
           sellerMessage,
           existSeller.username
         );
@@ -190,7 +208,7 @@ const updateCommunication = async (req, res) => {
         await sendEmailNotification(
           existSeller.username,
           existSeller.email,
-          `You have received a new message from ${existClient.username}`,
+          `${YOU_HAVE_RECIVE_RESPONSE} ${existClient.username}`,
           clientMessage,
           existClient.username
         );
@@ -221,12 +239,12 @@ const updateCommunication = async (req, res) => {
         };
       }
       await CommunicationModel.findByIdAndUpdate(id, updateData, { new: true });
-      res.status(200).json({ message: "Message Send" });
+      res.status(200).json({ message: MESSAGE_SEND_MESSAGE });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 };
 
@@ -248,22 +266,23 @@ async function sendEmailNotification(
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
-      name: "Suisse-Offerten",
-      link: "https://suisse-offerten.ch/",
+      name: NAME_RESPONSE,
+      link: DOMAIN_URL_RESPONSE,
+      copyright: OUTRO_RESPONSE,
     },
   });
   const emailTemplate = {
     body: {
       name: `${name}`,
-      intro: `You have received a new message from ${receiveName}:`,
+      intro: `${YOU_HAVE_RECIVE_RESPONSE} ${receiveName}:`,
+      signature: SINGNATURE_RESPONSE,
       outro: `
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Message:</strong>
+          <strong style="font-size: 16px;">${MESSAGE_RESPONSE}:</strong>
           <p style="font-size: 14px; color: #555;">${message}</p>
         </div>
-        <p style="font-size: 14px; color: #777;">Please login to your account to reply to this message.</p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
-        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #777;">${LOGIN_TO_REPLY_MESSAGE_RESPONSE}</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">${NAME_RESPONSE}</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
         <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
       `,
@@ -287,12 +306,12 @@ const deleteCommunication = async (req, res) => {
   try {
     if (existCommunication) {
       await CommunicationModel.findByIdAndDelete(id);
-      res.status(200).json({ message: "Delete Successful" });
+      res.status(200).json({ message: DELETE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 };
 

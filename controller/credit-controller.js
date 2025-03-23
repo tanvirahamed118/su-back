@@ -1,5 +1,13 @@
 const CreditModel = require("../models/credit-model");
 const SellerModel = require("../models/seller-model");
+const {
+  SERVER_ERROR_MESSAGE,
+  CREDIT_CREATE_SUCCESS_MESSAGE,
+  CREDIT_CANCEL_SUCCESS_MESSAGE,
+  UPDATE_SUCCESS_MESSAGE,
+  CREDIT_NOT_FOUND_MESSAGE,
+  DELETE_SUCCESS_MESSAGE,
+} = require("../utils/response");
 
 // get one Credit
 const getOneCredit = async (req, res) => {
@@ -8,7 +16,7 @@ const getOneCredit = async (req, res) => {
     const credit = await CreditModel.findOne({ _id: id });
     res.status(200).json(credit);
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error: error });
   }
 };
 
@@ -18,7 +26,7 @@ async function getAllCredit(req, res) {
     const credits = await CreditModel.find();
     res.status(200).json(credits);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error: error });
   }
 }
 
@@ -46,7 +54,7 @@ async function getAllCreditByAdmin(req, res) {
       credits,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error: error });
   }
 }
 
@@ -61,9 +69,9 @@ const createCredit = async (req, res) => {
       credits,
     });
     await createData.save();
-    res.status(200).json({ message: "Create successful" });
+    res.status(200).json({ message: CREDIT_CREATE_SUCCESS_MESSAGE });
   } catch (error) {
-    res.status(500).json({ error: error, message: "request Faild!" });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error: error });
   }
 };
 
@@ -81,10 +89,10 @@ const cancelCredit = async (req, res) => {
       await SellerModel.findByIdAndUpdate(id, updateSeller, {
         new: true,
       });
-      res.status(200).json({ message: "Credits cancel successful" });
+      res.status(200).json({ message: CREDIT_CANCEL_SUCCESS_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ error: error, message: "request Faild!" });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error: error });
   }
 };
 
@@ -104,12 +112,12 @@ const updateCredit = async (req, res) => {
       await CreditModel.findByIdAndUpdate(id, updateData, {
         new: true,
       });
-      res.status(200).json({ message: "Update successful" });
+      res.status(200).json({ message: UPDATE_SUCCESS_MESSAGE });
     } else {
-      res.status(200).json({ message: "Credits not found!" });
+      res.status(200).json({ message: CREDIT_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json(error);
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error: error });
   }
 };
 
@@ -121,12 +129,12 @@ const deleteCredit = async (req, res) => {
   try {
     if (existCredit) {
       await CreditModel.findByIdAndDelete(id);
-      res.status(200).json({ message: "Delete successful" });
+      res.status(200).json({ message: DELETE_SUCCESS_MESSAGE });
     } else {
-      res.status(200).json({ message: "Credits not found!" });
+      res.status(404).json({ message: CREDIT_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ error: error, message: "Update Faild!" });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error: error });
   }
 };
 

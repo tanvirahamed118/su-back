@@ -8,6 +8,30 @@ const EMAIL = process.env.EMAIL;
 const PASSWORD = process.env.PASSWORD;
 const nodemailer = require("nodemailer");
 const Mailgen = require("mailgen");
+const {
+  SERVER_ERROR_MESSAGE,
+  DATA_NOT_FOUND_MESSAGE,
+  EMAIL_ALREADY_EXIST_MESSAGE,
+  REGISTRATION_SUCCESS_MESSAGE,
+  INCORRECT_PASSWORD_MESSAGE,
+  LOGIN_SUCCESSFUL_MESSAGE,
+  UPDATE_SUCCESS_MESSAGE,
+  OTP_SEND_SUCCESS_MESSAGE,
+  TOKEN_EXPIRED_MESSAGE,
+  OTP_MATCH_SUCCESS_MESSAGE,
+  OTP_NOT_MATCH_MESSAGE,
+  PASSWORD_CHANGE_SUCCESS_MESSAGE,
+  DELETE_SUCCESS_MESSAGE,
+} = require("../utils/response");
+const {
+  NAME_RESPONSE,
+  DOMAIN_URL_RESPONSE,
+  RESET_PASSWORD_RESPONSE,
+  GET_OTP_RESPONSE,
+  YOUR_OTP_RESPONSE,
+  SINGNATURE_RESPONSE,
+  OUTRO_RESPONSE,
+} = require("../utils/email.response");
 const supportMail = process.env.SUPPORT_MAIL;
 const supportPhone = process.env.SUPPORT_PHONE;
 const corsUrl = process.env.CORS_URL;
@@ -18,7 +42,7 @@ async function getAdmin(req, res) {
     const data = await AdminModel.find();
     res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -28,12 +52,12 @@ async function getOneAdmin(req, res) {
   const existAdmin = await AdminModel.findOne({ _id: id });
   try {
     if (!existAdmin) {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     } else {
       res.status(200).json(existAdmin);
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -43,7 +67,7 @@ async function register(req, res) {
   const existAdmin = await AdminModel.findOne({ email: email });
   try {
     if (existAdmin) {
-      return res.status(404).json({ message: "Email Already Exist" });
+      return res.status(404).json({ message: EMAIL_ALREADY_EXIST_MESSAGE });
     }
     bcrypt.hash(password, 10, async function (err, hash) {
       const newAdmin = new AdminModel({
@@ -60,11 +84,11 @@ async function register(req, res) {
       res.status(201).json({
         admin: newAdmin,
         token: "Bearer " + token,
-        message: "Registration Successful",
+        message: REGISTRATION_SUCCESS_MESSAGE,
       });
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -74,11 +98,11 @@ async function login(req, res) {
   try {
     const existAdmin = await AdminModel.findOne({ email: email });
     if (!existAdmin) {
-      return res.status(404).json({ message: "Data Not Found" });
+      return res.status(404).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
     const matchpassword = await bcrypt.compare(password, existAdmin.password);
     if (!matchpassword) {
-      return res.status(400).json({ message: "Incorrect Password" });
+      return res.status(400).json({ message: INCORRECT_PASSWORD_MESSAGE });
     }
     const token = jwt.sign(
       { email: existAdmin.email, id: existAdmin._id },
@@ -87,10 +111,10 @@ async function login(req, res) {
     res.status(200).json({
       admin: existAdmin,
       token: token,
-      message: "Login Successful",
+      message: LOGIN_SUCCESSFUL_MESSAGE,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -154,12 +178,12 @@ async function updateAdmin(req, res) {
       });
       res
         .status(200)
-        .json({ admin: UpdateAdmin, message: "Update Successful" });
+        .json({ admin: UpdateAdmin, message: UPDATE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -188,25 +212,26 @@ async function otpSend(req, res) {
       let mailGenarator = new Mailgen({
         theme: "default",
         product: {
-          name: "suisse-offerten",
-          link: "https://suisse-offerten.ch/",
+          name: NAME_RESPONSE,
+          link: DOMAIN_URL_RESPONSE,
+          copyright: OUTRO_RESPONSE,
         },
       });
       let response = {
         body: {
           name: existAdmin?.email,
-          intro: "Reset your password",
+          intro: RESET_PASSWORD_RESPONSE,
+          signature: SINGNATURE_RESPONSE,
           table: {
             data: [
               {
-                Message: `your otp is ${otp}`,
+                Message: `${YOUR_OTP_RESPONSE} ${otp}`,
               },
             ],
           },
           outro: `
-        <p style="font-size: 14px; color: #777;">Please check your email, you have receive OTP code</p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
-        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #777;">${GET_OTP_RESPONSE}</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">${NAME_RESPONSE}</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
         <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
       `,
@@ -216,17 +241,19 @@ async function otpSend(req, res) {
       let message = {
         from: EMAIL,
         to: req.body.email,
-        subject: "Reset Password",
+        subject: RESET_PASSWORD_RESPONSE,
         html: mail,
       };
       transport.sendMail(message).then(() => {
-        return res.status(200).json({ email: email, message: "OTP Send" });
+        return res
+          .status(200)
+          .json({ email: email, message: OTP_SEND_SUCCESS_MESSAGE });
       });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -239,15 +266,15 @@ async function otpCheck(req, res) {
       let currentTime = new Date().getTime();
       let diffrenceTime = data.expireIn - currentTime;
       if (diffrenceTime < 0) {
-        res.status(500).json({ message: "Token Expired" });
+        res.status(500).json({ message: TOKEN_EXPIRED_MESSAGE });
       } else {
-        res.status(200).json({ message: "OTP Matched" });
+        res.status(200).json({ message: OTP_MATCH_SUCCESS_MESSAGE });
       }
     } else {
-      res.status(500).json({ message: "OTP Does Not Match" });
+      res.status(500).json({ message: OTP_NOT_MATCH_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -260,13 +287,13 @@ async function changePassword(req, res) {
       bcrypt.hash(password, 10, async function (err, hash) {
         admin.password = hash;
         await admin.save();
-        res.status(200).json({ message: "Password Changed" });
+        res.status(200).json({ message: PASSWORD_CHANGE_SUCCESS_MESSAGE });
       });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -284,13 +311,13 @@ async function updateAdminPassword(req, res) {
         await AdminModel.findByIdAndUpdate(id, updateAdmin, {
           new: true,
         });
-        res.status(200).json({ message: "Password Changed" });
+        res.status(200).json({ message: PASSWORD_CHANGE_SUCCESS_MESSAGE });
       });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -301,12 +328,12 @@ async function deleteAdmin(req, res) {
   try {
     if (existAdmin) {
       await AdminModel.findByIdAndDelete(id);
-      res.status(200).json({ message: "Account Deleted" });
+      res.status(200).json({ message: DELETE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 

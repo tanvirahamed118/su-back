@@ -5,6 +5,27 @@ const EMAIL = process.env.EMAIL;
 const PASSWORD = process.env.PASSWORD;
 const nodemailer = require("nodemailer");
 const Mailgen = require("mailgen");
+const {
+  SERVER_ERROR_MESSAGE,
+  COMMUNICATION_NOT_FOUND_MESSAGE,
+  MESSAGE_SEND_MESSAGE,
+  UPDATE_SUCCESS_MESSAGE,
+  DELETE_SUCCESS_MESSAGE,
+} = require("../utils/response");
+const {
+  NAME_RESPONSE,
+  DOMAIN_URL_RESPONSE,
+  MESSAGE_FROM_RESPONSE,
+  REQUEST_CREATOR_NAME_RESPONSE,
+  REQUEST_CREATOR_EMAIL_RESPONSE,
+  REQUEST_CREATOR_ROLE_RESPONSE,
+  REQUEST_CREATOR_PHONE_RESPONSE,
+  REQUEST_CREATOR_SERVICE_RESPONSE,
+  REQUEST_CREATOR_NOTICE_RESPONSE,
+  GET_MESSAGE_FROM_CONTACT_PAGE_RESPONSE,
+  SINGNATURE_RESPONSE,
+  OUTRO_RESPONSE,
+} = require("../utils/email.response");
 const supportMail = process.env.SUPPORT_MAIL;
 const supportPhone = process.env.SUPPORT_PHONE;
 const corsUrl = process.env.CORS_URL;
@@ -32,7 +53,7 @@ async function getAllContact(req, res) {
       emails,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -63,7 +84,7 @@ async function getAllSellerEmails(req, res) {
       emails,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -84,7 +105,7 @@ async function getAllClientEmails(req, res) {
       emails,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -94,7 +115,7 @@ async function getAllContactDefault(req, res) {
     const emails = await ContactModel.find();
     res.status(200).json(emails);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -104,12 +125,12 @@ async function getSingleContact(req, res) {
   const existMessage = await ContactModel.findOne({ _id: id });
   try {
     if (!existMessage) {
-      res.status(400).json({ message: "Message Not Found" });
+      res.status(400).json({ message: COMMUNICATION_NOT_FOUND_MESSAGE });
     } else {
       res.status(200).json(existMessage);
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -137,42 +158,43 @@ async function createContact(req, res) {
     let mailGenarator = new Mailgen({
       theme: "default",
       product: {
-        name: "Suiess-offerten",
-        link: "https://suisse-offerten.ch/",
+        name: NAME_RESPONSE,
+        link: DOMAIN_URL_RESPONSE,
+        copyright: OUTRO_RESPONSE,
       },
     });
 
     let response = {
       body: {
         name: "Cheaf",
-        intro: `Message from ${email}`,
+        intro: `${MESSAGE_FROM_RESPONSE}: ${email}`,
+        signature: SINGNATURE_RESPONSE,
         outro: `
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Request Creator Name:</strong>
+          <strong style="font-size: 16px;">${REQUEST_CREATOR_NAME_RESPONSE}:</strong>
           <p style="font-size: 14px; color: #555;">${name}</p>
         </div>
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Request Creator Email:</strong>
+          <strong style="font-size: 16px;">${REQUEST_CREATOR_EMAIL_RESPONSE}:</strong>
           <p style="font-size: 14px; color: #555;">${email}</p>
         </div>
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Request Creator Role:</strong>
+          <strong style="font-size: 16px;">${REQUEST_CREATOR_ROLE_RESPONSE}:</strong>
           <p style="font-size: 14px; color: #555;">${role}</p>
         </div>
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Request Phone Number:</strong>
+          <strong style="font-size: 16px;">${REQUEST_CREATOR_PHONE_RESPONSE}:</strong>
           <p style="font-size: 14px; color: #555;">${phone}</p>
         </div>
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Service Area:</strong>
+          <strong style="font-size: 16px;">${REQUEST_CREATOR_SERVICE_RESPONSE}:</strong>
           <p style="font-size: 14px; color: #555;">${service}</p>
         </div>
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Request Creator Notice:</strong>
+          <strong style="font-size: 16px;">${REQUEST_CREATOR_NOTICE_RESPONSE}:</strong>
           <p style="font-size: 14px; color: #555;">${notice}</p>
         </div>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
-        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">${NAME_RESPONSE}</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
         <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
       `,
@@ -182,16 +204,18 @@ async function createContact(req, res) {
     let message = {
       from: email,
       to: EMAIL,
-      subject: "You have received a message from contact us page",
+      subject: GET_MESSAGE_FROM_CONTACT_PAGE_RESPONSE,
       html: mail,
     };
 
     await newMessage.save();
     transport.sendMail(message).then(() => {
-      return res.status(201).json({ newMessage, message: "Message Send" });
+      return res
+        .status(201)
+        .json({ newMessage, message: MESSAGE_SEND_MESSAGE });
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -214,12 +238,12 @@ async function updateContact(req, res) {
         new: true,
       });
 
-      res.status(200).json({ updateMessage, message: "Update Successful" });
+      res.status(200).json({ updateMessage, message: UPDATE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Message Not Found" });
+      res.status(400).json({ message: COMMUNICATION_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -237,12 +261,12 @@ async function updateContactStatus(req, res) {
         new: true,
       });
 
-      res.status(200).json({ updateMessage, message: "Update Successful" });
+      res.status(200).json({ updateMessage, message: UPDATE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Message Not Found" });
+      res.status(400).json({ message: COMMUNICATION_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -253,12 +277,12 @@ async function deleteContact(req, res) {
   try {
     if (existMessage) {
       await ContactModel.findByIdAndDelete(id);
-      res.status(200).json({ message: "Account Deleted" });
+      res.status(200).json({ message: DELETE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Message Does Not Exist" });
+      res.status(400).json({ message: COMMUNICATION_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 

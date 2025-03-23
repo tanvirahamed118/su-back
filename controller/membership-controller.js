@@ -1,5 +1,13 @@
 const MembershipModel = require("../models/membership.model");
 const SellerModel = require("../models/seller-model");
+const {
+  SERVER_ERROR_MESSAGE,
+  MEMBERSHIP_CREATE_SUCCESS_MESSAGE,
+  MEMBERSHIP_CANCEL_SUCCESS_MESSAGE,
+  UPDATE_SUCCESS_MESSAGE,
+  DATA_NOT_FOUND_MESSAGE,
+  DELETE_SUCCESS_MESSAGE,
+} = require("../utils/response");
 
 // get one Membership
 async function getOneMembership(req, res) {
@@ -8,7 +16,7 @@ async function getOneMembership(req, res) {
     const Membership = await MembershipModel.findOne({ _id: id });
     res.status(200).json(Membership);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -18,7 +26,7 @@ async function getAllMembership(req, res) {
     const Membership = await MembershipModel.find();
     res.status(200).json(Membership);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -46,7 +54,7 @@ async function getAllMembershipByAdmin(req, res) {
       memberships,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -84,9 +92,9 @@ async function createMembership(req, res) {
       status,
     });
     await createData.save();
-    res.status(200).json({ message: "Membership Create Successful" });
+    res.status(200).json({ message: MEMBERSHIP_CREATE_SUCCESS_MESSAGE });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -104,10 +112,10 @@ async function cancelMembership(req, res) {
       await SellerModel.findByIdAndUpdate(id, updateSeller, {
         new: true,
       });
-      res.status(200).json({ message: "Membership Cancel Successful" });
+      res.status(200).json({ message: MEMBERSHIP_CANCEL_SUCCESS_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -146,12 +154,12 @@ async function updateMembership(req, res) {
       await MembershipModel.findByIdAndUpdate(id, updateData, {
         new: true,
       });
-      res.status(200).json({ message: "Membership update successful" });
+      res.status(200).json({ message: UPDATE_SUCCESS_MESSAGE });
     } else {
-      res.status(200).json({ message: "Membership Not Found" });
+      res.status(200).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -163,12 +171,12 @@ async function deleteMembership(req, res) {
   try {
     if (existMembership) {
       await MembershipModel.findByIdAndDelete(id);
-      res.status(200).json({ message: "Delete Successful" });
+      res.status(200).json({ message: DELETE_SUCCESS_MESSAGE });
     } else {
-      res.status(200).json({ message: "Membership Not Found" });
+      res.status(200).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 

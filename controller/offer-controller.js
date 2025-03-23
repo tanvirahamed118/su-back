@@ -5,6 +5,67 @@ const ClientModel = require("../models/client-model");
 const CommunicationModel = require("../models/communication-model");
 const nodemailer = require("nodemailer");
 const Mailgen = require("mailgen");
+const {
+  SERVER_ERROR_MESSAGE,
+  DATA_NOT_FOUND_MESSAGE,
+  BID_NOT_ACCEPT_MESSAGE,
+  PARTICIPATION_SUCCESS_MESSAGE,
+  ENOUGH_CREDIT_REQUIRE_MESSAGE,
+  REQUEST_SEND_SUCCESS_MESSAGE,
+  NOT_ELIGABLE_TO_SEND_BID_RESPONSE,
+  ALREADY_SEND_BID_MESSAGE,
+  BID_SEND_SUCCESS_MESSAGE,
+  ALREADY_SEND_REQUEST_MESSAGE,
+  SELLER_NOT_HAVE_ENOUGH_CREDIT_MESSAGE,
+  COMMUNICATION_MARK_SEEN_MESSAGE,
+  UPDATE_SUCCESS_MESSAGE,
+  REVIEW_REQUEST_SEND_MESSAGE,
+  OFFER_ARCHIVED_SUCCESS_MESSAGE,
+  DELETE_SUCCESS_MESSAGE,
+} = require("../utils/response");
+const {
+  YOU_HAVE_RECIVE_RESPONSE,
+  SEND_REQUEST_TO_JOB_RESPONSE,
+  CHECK_DASHBOARD_TO_SEE_BID_RESPONSE,
+  ASK_TO_MAKE_PROPOSAL_RESPONSE,
+  MESSAGE_RESPONSE,
+  SEND_OFFER_REQUEST_RESPONSE,
+  ASK_TO_MAKE_OFFER_RESPONSE,
+  LOGIN_TO_CHECK_OFFER_RESPONSE,
+  PLACE_A_BID_RESPONSE,
+  PRICE_UNIT_RESPONSE,
+  OFFER_PRICE_RESPONSE,
+  OFFER_NOTE_RESPONSE,
+  DOWNLOAD_OFFER_FILE_RESPONSE,
+  OFFER_FILE_RESPONSE,
+  GOOD_NEWS_PROPOSAL_ACCEPT_RESPONSE,
+  ACCEPT_OFFER_IN_THIS_JOB_RESPONSE,
+  YOU_HAVE_GOOD_NEWS_RESPONSE,
+  ACCEPT_OFFER_SUCCESS_RESPONSE,
+  REJECT_OFFER_RESPONSE,
+  SORRY_INFROM_RESPONSE,
+  DID_NOT_ACCEPT_OFFER_RESPONSE,
+  LOGIN_DASHBOARD_TO_SEE_DETAILS_RESPONSE,
+  SORRY_TO_INFORM_OFFER_REJECT_RESPONSE,
+  CLIENT_NAME_RESPONSE,
+  CLIENT_EMAIL_RESPONSE,
+  CLIENT_PHONE_RESPONSE,
+  NAME_RESPONSE,
+  DOMAIN_URL_RESPONSE,
+  GET_NEW_OFFER_RESPONSE,
+  LOGIN_TO_REPLY_MESSAGE_RESPONSE,
+  UPDATE_THERE_BID_RESPONSE,
+  RECIVE_UPDATE_OFFER_RESPONSE,
+  SEND_REVIEW_REQUEST_RESPONSE,
+  ASK_TO_ADD_REVIEW_RESPONSE,
+  LOGIN_DASHBOARD_TO_WRITE_REVIEW_RESPONSE,
+  JOB_TITLE_RESPONSE,
+  OFFER_HAS_DELETE_RESPONSE,
+  OFFER_VAILATION_ERROR_RESPONSE,
+  HAVE_QUESTION_ASK_CONTACT_RESPONSE,
+  SINGNATURE_RESPONSE,
+  OUTRO_RESPONSE,
+} = require("../utils/email.response");
 const EMAIL = process.env.EMAIL;
 const PASSWORD = process.env.PASSWORD;
 const supportMail = process.env.SUPPORT_MAIL;
@@ -18,7 +79,7 @@ async function getOneOffer(req, res) {
     const Offer = await OfferModel.findOne({ _id: id });
     res.status(200).json(Offer);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -37,7 +98,7 @@ async function getOneOfferByJobId(req, res) {
     };
     res.status(200).json(enrichedOffer);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -47,7 +108,7 @@ async function getAllOfferDefault(req, res) {
     const Offer = await OfferModel.find();
     res.status(200).json(Offer);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -103,7 +164,7 @@ async function getAllOffer(req, res) {
       offers: detailedParticipations,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -159,7 +220,7 @@ async function getAllOfferByAdmin(req, res) {
       offers: detailedParticipations,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -214,7 +275,7 @@ async function getAllOfferBySeller(req, res) {
       offers: detailedParticipations,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -268,7 +329,7 @@ async function getAllOfferBySellerBoth(req, res) {
       offers: detailedParticipations,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -281,7 +342,7 @@ async function getOneOfferByBoth(req, res) {
     if (jobId) filter.jobId = jobId;
     const offer = await OfferModel.findOne(filter);
     if (!offer) {
-      return res.status(404).json({ message: "Offer Not Found" });
+      return res.status(404).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
 
     const sellerData = await SellerModel.findById(offer.sellerId);
@@ -296,7 +357,7 @@ async function getOneOfferByBoth(req, res) {
 
     res.status(200).json(detailedParticipation);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -364,7 +425,7 @@ async function getAllOfferByClient(req, res) {
       offers: detailedParticipations,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -382,7 +443,7 @@ async function createPerticipation(req, res) {
 
   try {
     if (existoffer?.length >= 5) {
-      return res.status(400).json({ message: "No More Bid Are Accepted" });
+      return res.status(400).json({ message: BID_NOT_ACCEPT_MESSAGE });
     }
     if (credits >= jobCredit) {
       const updateSellerCredit = {
@@ -418,8 +479,8 @@ async function createPerticipation(req, res) {
       await sendEmailNotification(
         firstname,
         email,
-        `You have received a new request from ${username}`,
-        `${username} send a request to your job: ${jobTitle}. Please check your dashboard to see the perticipation.`,
+        `${YOU_HAVE_RECIVE_RESPONSE}: ${username}`,
+        `${username} ${SEND_REQUEST_TO_JOB_RESPONSE}: ${jobTitle}. ${CHECK_DASHBOARD_TO_SEE_BID_RESPONSE}`,
         username
       );
       await communicationData.save();
@@ -430,12 +491,12 @@ async function createPerticipation(req, res) {
       await JobModel.findByIdAndUpdate(jobId, UpdateJob, {
         new: true,
       });
-      res.status(200).json({ message: "Perticipation Successful" });
+      res.status(200).json({ message: PARTICIPATION_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "You Do Not Have Enough Credit" });
+      res.status(400).json({ message: ENOUGH_CREDIT_REQUIRE_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -468,9 +529,9 @@ async function makeOfferRequest(req, res) {
         offerRequest: true,
       };
       updateCommunication.$push.clientMessage = {
-        message: `We will ask you to make a proposal request and send your best offer. We will check it shortly.\n ${
+        message: `${ASK_TO_MAKE_PROPOSAL_RESPONSE}.\n ${
           offerMessage &&
-          `<p style="font-weight: bold; color: #777; font-size: 18px">Message: </p>${offerMessage}`
+          `<p style="font-weight: bold; color: #777; font-size: 18px">${MESSAGE_RESPONSE}: </p>${offerMessage}`
         }`,
         date: new Date(),
         time: new Date().getTime(),
@@ -483,18 +544,18 @@ async function makeOfferRequest(req, res) {
       await sendEmailNotification(
         firstName,
         email,
-        `${firstname} send offer request`,
-        `${firstname} ask you to make offer to this job: ${jobTitle}. Please login to your dashboard and make a offer request. ${
+        `${firstname} ${SEND_OFFER_REQUEST_RESPONSE}`,
+        `${firstname} ${ASK_TO_MAKE_OFFER_RESPONSE}: ${jobTitle}. ${LOGIN_TO_CHECK_OFFER_RESPONSE}. ${
           offerMessage &&
-          `<p style="font-weight: bold; color: #777; font-size: 18px">${firstname} Message: </p>${offerMessage}`
+          `<p style="font-weight: bold; color: #777; font-size: 18px">${firstname} ${MESSAGE_RESPONSE}: </p>${offerMessage}`
         }`,
         firstname
       );
       await OfferModel.findByIdAndUpdate(id, requestData, { new: true });
     }
-    res.status(200).json({ message: "Request Send Successful" });
+    res.status(200).json({ message: REQUEST_SEND_SUCCESS_MESSAGE });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -521,9 +582,9 @@ async function sendBidRequest(req, res) {
     if (!existOffer.offerRequested) {
       return res
         .status(400)
-        .json({ message: "You Are Not Eligble to Send Bid" });
+        .json({ message: NOT_ELIGABLE_TO_SEND_BID_RESPONSE });
     } else if (existOffer.offerPlaced) {
-      return res.status(400).json({ message: "You Are Already Send Bid" });
+      return res.status(400).json({ message: ALREADY_SEND_BID_MESSAGE });
     } else {
       const file = req?.file?.originalname.split(" ").join("-");
       const basePath = `${req.protocol}://${req.get("host")}/public/uploads/`;
@@ -543,7 +604,7 @@ async function sendBidRequest(req, res) {
         await sendBidEmail(
           username,
           email,
-          `${username} place a bid on ${jobTitle}`,
+          `${username} ${PLACE_A_BID_RESPONSE} ${jobTitle}`,
           username,
           offerPrice,
           priceUnit,
@@ -552,9 +613,9 @@ async function sendBidRequest(req, res) {
 
         let updateData = { $push: {} };
         updateData.$push.sellerMessage = {
-          message: `price unit: ${priceUnit}\n offer price: ${offerPrice}\n offer note: ${offerNote}${
+          message: `${PRICE_UNIT_RESPONSE}: ${priceUnit}\n ${OFFER_PRICE_RESPONSE}: ${offerPrice}\n ${OFFER_NOTE_RESPONSE}: ${offerNote}${
             req.file
-              ? `\n offer file: <br> <a style="color: #777; font-weight: bold;" href="${offerFiles}" download>Download offer file</a>`
+              ? `\n ${OFFER_FILE_RESPONSE}: <br> <a style="color: #777; font-weight: bold;" href="${offerFiles}" download>${DOWNLOAD_OFFER_FILE_RESPONSE}</a>`
               : ""
           }`,
           date: new Date(),
@@ -576,9 +637,9 @@ async function sendBidRequest(req, res) {
         });
       }
     }
-    res.status(200).json({ message: "Bid Send Successful" });
+    res.status(200).json({ message: BID_SEND_SUCCESS_MESSAGE });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -618,7 +679,7 @@ async function updateOfferRequest(req, res) {
     if (status === "accept") {
       let updateData = { $push: {} };
       updateData.$push.clientMessage = {
-        message: `GOOD NEWS, your proposal is accepted.`,
+        message: `${GOOD_NEWS_PROPOSAL_ACCEPT_RESPONSE}`,
         date: new Date(),
         time: new Date().getTime(),
       };
@@ -630,8 +691,8 @@ async function updateOfferRequest(req, res) {
       await sendEmailNotification(
         username,
         email,
-        `${username} accept your offer in this job: ${jobTitle}`,
-        `${sellerName} you have a good news. ${username} accept your offer. Please login to your dashboard and go to won tab to see this update.`,
+        `${username} ${ACCEPT_OFFER_IN_THIS_JOB_RESPONSE}: ${jobTitle}`,
+        `${sellerName} ${YOU_HAVE_GOOD_NEWS_RESPONSE}. ${username} ${ACCEPT_OFFER_SUCCESS_RESPONSE}`,
         username
       );
       await JobModel.findByIdAndUpdate(jobId, acceptJobData, { new: true });
@@ -650,13 +711,13 @@ async function updateOfferRequest(req, res) {
         await sendEmailNotification(
           username,
           rejectSeller.email,
-          `${username} rejected your offer`,
-          `Sorry to inform you that ${username} did not accept your offer for the job: ${jobTitle}. Please log in to your dashboard for more details.`,
+          `${username} ${REJECT_OFFER_RESPONSE}`,
+          `${SORRY_INFROM_RESPONSE} ${username} ${DID_NOT_ACCEPT_OFFER_RESPONSE}: ${jobTitle}. ${LOGIN_DASHBOARD_TO_SEE_DETAILS_RESPONSE}`,
           username
         );
         let rejectUpdateData = { $push: {} };
         rejectUpdateData.$push.clientMessage = {
-          message: `We are sorry to inform you that your proposal was rejected.`,
+          message: SORRY_TO_INFORM_OFFER_REJECT_RESPONSE,
           date: new Date(),
           time: new Date().getTime(),
         };
@@ -679,15 +740,15 @@ async function updateOfferRequest(req, res) {
     } else {
       let updateData = { $push: {} };
       updateData.$push.clientMessage = {
-        message: `We are sorry to inform you that your proposal was rejected.`,
+        message: SORRY_TO_INFORM_OFFER_REJECT_RESPONSE,
         date: new Date(),
         time: new Date().getTime(),
       };
       await sendEmailNotification(
         username,
         email,
-        `${username} reject your offer`,
-        `Sorry to inform you that ${username} did not accept your offer for the job: ${jobTitle}. Please log in to your dashboard for more details.`,
+        `${username} ${REJECT_OFFER_RESPONSE}`,
+        `${SORRY_INFROM_RESPONSE} ${username} ${DID_NOT_ACCEPT_OFFER_RESPONSE}: ${jobTitle}. ${LOGIN_DASHBOARD_TO_SEE_DETAILS_RESPONSE}`,
         username
       );
       await CommunicationModel.findByIdAndUpdate(
@@ -700,7 +761,7 @@ async function updateOfferRequest(req, res) {
     }
     res.status(200).json({ message: `Offer ${status}` });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -719,12 +780,12 @@ async function createOffer(req, res) {
     });
 
     if (existOffer) {
-      return res.status(400).json({ message: "Already Send A request" });
+      return res.status(400).json({ message: ALREADY_SEND_REQUEST_MESSAGE });
     }
     if (existSeller.credits < 2) {
       return res
         .status(400)
-        .json({ message: "Seller Does Not Have Enough Credit" });
+        .json({ message: SELLER_NOT_HAVE_ENOUGH_CREDIT_MESSAGE });
     }
     const existCommunication = await CommunicationModel.findOne({
       jobId: jobId,
@@ -733,9 +794,9 @@ async function createOffer(req, res) {
     if (existCommunication) {
       let updateCommunication = { $push: {} }; // Initialize $push as an object
       updateCommunication.$push.clientMessage = {
-        message: `We will ask you to make a proposal request and send your best offer. We will check it shortly.\n ${
+        message: `${ASK_TO_MAKE_PROPOSAL_RESPONSE}\n ${
           message &&
-          `<p style="font-weight: bold; color: #777; font-size: 18px">Message: </p>${message}`
+          `<p style="font-weight: bold; color: #777; font-size: 18px">${MESSAGE_RESPONSE}: </p>${message}`
         }`,
         date: new Date(),
         time: new Date().getTime(),
@@ -744,11 +805,13 @@ async function createOffer(req, res) {
       await sendEmailNotification(
         existSeller.username,
         existSeller.email,
-        `You have received a new message from ${existClient?.username}`,
-        `Client Name: ${existClient?.username} <br> Client Phone Number: ${
+        `${YOU_HAVE_RECIVE_RESPONSE} ${existClient?.username}`,
+        `${CLIENT_NAME_RESPONSE}: ${
+          existClient?.username
+        } <br> ${CLIENT_PHONE_RESPONSE}: ${
           existClient?.phone
-        }<br> Client Email: ${existClient?.email} <br> ${
-          message && `message: ${message}`
+        }<br> ${CLIENT_EMAIL_RESPONSE}: ${existClient?.email} <br> ${
+          message && `${MESSAGE_RESPONSE}: ${message}`
         }`,
         existClient?.username
       );
@@ -771,9 +834,9 @@ async function createOffer(req, res) {
     };
     await SellerModel.findByIdAndUpdate(id, updateData, { new: true });
     await OfferData.save();
-    res.status(200).json({ message: "Request Send Successful" });
+    res.status(200).json({ message: REQUEST_SEND_SUCCESS_MESSAGE });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -797,30 +860,31 @@ async function sendBidEmail(
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
-      name: "Suisse-Offerten",
-      link: "https://suisse-offerten.ch/",
+      name: NAME_RESPONSE,
+      link: DOMAIN_URL_RESPONSE,
+      copyright: OUTRO_RESPONSE,
     },
   });
   const emailTemplate = {
     body: {
       name: `${name}`,
-      intro: `You have received a new offer from ${receiveName}:`,
+      intro: `${GET_NEW_OFFER_RESPONSE} ${receiveName}:`,
+      signature: SINGNATURE_RESPONSE,
       outro: `
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px; display: flex; gap: 5px">
-          <strong style="font-size: 16px;">Offer Price: </strong>
+          <strong style="font-size: 16px;">${OFFER_PRICE_RESPONSE}: </strong>
           <p style="font-size: 14px; color: #555;">${offerPrice}</p>
         </div>
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px; display: flex; gap: 5px">
-          <strong style="font-size: 16px;">Offer Unit: </strong>
+          <strong style="font-size: 16px;">${PRICE_UNIT_RESPONSE}: </strong>
           <p style="font-size: 14px; color: #555;">${priceUnit}</p>
         </div>
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px; display: flex; gap: 5px">
-          <strong style="font-size: 16px;">Offer Note: </strong>
+          <strong style="font-size: 16px;">${OFFER_NOTE_RESPONSE}: </strong>
           <p style="font-size: 14px; color: #555;">${offerNote}</p>
         </div>
-        <p style="font-size: 14px; color: #777;">Please login to your account to reply to this message.</p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
-        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #777;">${LOGIN_TO_REPLY_MESSAGE_RESPONSE}</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">${NAME_RESPONSE}</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
         <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
       `,
@@ -850,10 +914,10 @@ async function updateOfferView(req, res) {
     };
     await OfferModel.updateMany(filter, updateView);
     res.status(200).json({
-      message: "Communications Marked As Seen",
+      message: COMMUNICATION_MARK_SEEN_MESSAGE,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -886,9 +950,9 @@ async function updateOfferDetails(req, res) {
     if (existCommunication) {
       let updateData = { $push: {} };
       updateData.$push.sellerMessage = {
-        message: `<strong>UPDATED:</strong>\n Price Unit: ${priceUnit}\n Offer Price: ${offerPrice}\n Offer Note: ${offerNote}${
+        message: `<strong>UPDATED:</strong>\n ${PRICE_UNIT_RESPONSE}: ${priceUnit}\n ${OFFER_PRICE_RESPONSE}: ${offerPrice}\n ${OFFER_NOTE_RESPONSE}: ${offerNote}${
           req.file
-            ? `\n Offer File: <br> <a style="color: #777; font-weight: bold;" href="${offerFiles}" download>Download offer file</a>`
+            ? `\n ${OFFER_FILE_RESPONSE}: <br> <a style="color: #777; font-weight: bold;" href="${offerFiles}" download>${DOWNLOAD_OFFER_FILE_RESPONSE}</a>`
             : ""
         }`,
         date: new Date(),
@@ -904,7 +968,7 @@ async function updateOfferDetails(req, res) {
       await updateBidEmail(
         username,
         jobEmail,
-        `${username} update their bid on ${jobTitle}`,
+        `${username} ${UPDATE_THERE_BID_RESPONSE} ${jobTitle}`,
         username,
         offerPrice,
         priceUnit,
@@ -913,10 +977,10 @@ async function updateOfferDetails(req, res) {
     }
     await OfferModel.findByIdAndUpdate(id, updateOffer, { new: true });
     res.status(200).json({
-      message: "Update Successful",
+      message: UPDATE_SUCCESS_MESSAGE,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -940,30 +1004,31 @@ async function updateBidEmail(
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
-      name: "Suisse-Offerten",
-      link: "https://suisse-offerten.ch/",
+      name: NAME_RESPONSE,
+      link: DOMAIN_URL_RESPONSE,
+      copyright: OUTRO_RESPONSE,
     },
   });
   const emailTemplate = {
     body: {
       name: `${name}`,
-      intro: `You have received update offer from ${receiveName}:`,
+      intro: `${RECIVE_UPDATE_OFFER_RESPONSE} ${receiveName}:`,
+      signature: SINGNATURE_RESPONSE,
       outro: `
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px; display: flex; gap: 5px">
-          <strong style="font-size: 16px;">Offer Price: </strong>
+          <strong style="font-size: 16px;">${OFFER_PRICE_RESPONSE}: </strong>
           <p style="font-size: 14px; color: #555;">${offerPrice}</p>
         </div>
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px; display: flex; gap: 5px">
-          <strong style="font-size: 16px;">Offer Unit: </strong>
+          <strong style="font-size: 16px;">${PRICE_UNIT_RESPONSE}: </strong>
           <p style="font-size: 14px; color: #555;">${priceUnit}</p>
         </div>
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px; display: flex; gap: 5px">
-          <strong style="font-size: 16px;">Offer Note: </strong>
+          <strong style="font-size: 16px;">${OFFER_NOTE_RESPONSE}: </strong>
           <p style="font-size: 14px; color: #555;">${offerNote}</p>
         </div>
-        <p style="font-size: 14px; color: #777;">Please login to your account to reply to this message.</p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
-        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #777;">${LOGIN_TO_REPLY_MESSAGE_RESPONSE}</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">${NAME_RESPONSE}</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
         <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
       `,
@@ -1000,16 +1065,16 @@ async function offerReviewRequest(req, res) {
       await sendEmailNotification(
         firstname,
         email,
-        `${username} send review request`,
-        `${username} ask you to given a review and share your experience. Please login to your dashboard and wirte a review.  <p style="font-weigth: bold; font-size: 14px; color: #555;">job title: ${jobTitle}</p>`,
+        `${username} ${SEND_REVIEW_REQUEST_RESPONSE}`,
+        `${username} ${ASK_TO_ADD_REVIEW_RESPONSE}. ${LOGIN_DASHBOARD_TO_WRITE_REVIEW_RESPONSE}  <p style="font-weigth: bold; font-size: 14px; color: #555;">${JOB_TITLE_RESPONSE}: ${jobTitle}</p>`,
         username
       );
-      res.status(200).json({ message: "Review Request Send" });
+      res.status(200).json({ message: REVIEW_REQUEST_SEND_MESSAGE });
     } else {
-      res.status(400).json("Data not found");
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -1023,12 +1088,12 @@ async function offerArchiveRequest(req, res) {
         offerArchived: true,
       };
       await OfferModel.findByIdAndUpdate(id, updateData, { new: true });
-      res.status(200).json({ message: "Offer Archived Successful" });
+      res.status(200).json({ message: OFFER_ARCHIVED_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json("Data Not Found");
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -1050,22 +1115,23 @@ async function sendEmailNotification(
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
-      name: "Suisse-Offerten",
-      link: "https://suisse-offerten.ch/",
+      name: NAME_RESPONSE,
+      link: DOMAIN_URL_RESPONSE,
+      copyright: OUTRO_RESPONSE,
     },
   });
   const emailTemplate = {
     body: {
       name: `${name}`,
-      intro: `You have received a new message from ${receiveName}:`,
+      intro: `${YOU_HAVE_RECIVE_RESPONSE} ${receiveName}:`,
+      signature: SINGNATURE_RESPONSE,
       outro: `
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Message:</strong>
+          <strong style="font-size: 16px;">${MESSAGE_RESPONSE}:</strong>
           <p style="font-size: 14px; color: #555;">${message}</p>
         </div>
-        <p style="font-size: 14px; color: #777;">Please login to your account to reply to this message.</p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
-        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #777;">${LOGIN_TO_REPLY_MESSAGE_RESPONSE}</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">${NAME_RESPONSE}</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
         <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
       `,
@@ -1099,7 +1165,7 @@ async function deleteOffer(req, res) {
     await sendDeleteEmail(
       username,
       email,
-      "Your Offer has been deleted",
+      `${OFFER_HAS_DELETE_RESPONSE}`,
       "Suisse Offerten Team"
     );
     const updateJob = {
@@ -1108,9 +1174,9 @@ async function deleteOffer(req, res) {
     await JobModel.findByIdAndUpdate(_id, updateJob, { new: true });
     await CommunicationModel.findByIdAndDelete(existCommunication?._id);
     await OfferModel.findByIdAndDelete(id);
-    res.status(200).json({ message: "Delete Successful" });
+    res.status(200).json({ message: DELETE_SUCCESS_MESSAGE });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -1126,28 +1192,29 @@ async function sendDeleteEmail(name, email, subject, receiveName) {
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
-      name: "Suisse-Offerten",
-      link: "https://suisse-offerten.ch/",
+      name: NAME_RESPONSE,
+      link: DOMAIN_URL_RESPONSE,
+      copyright: OUTRO_RESPONSE,
     },
   });
   const emailTemplate = {
     body: {
       name: `${name}`,
-      intro: `You have received a new message from ${receiveName}:`,
+      intro: `${YOU_HAVE_RECIVE_RESPONSE} ${receiveName}:`,
+      signature: SINGNATURE_RESPONSE,
       outro: `
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Message:</strong>
-          <p style="font-size: 14px; color: #555;">Your offer has voided our terms and policy. So, we regret to inform you that your offer and all communications has been deleted by the Swisse 0fferten team.</p>
+          <strong style="font-size: 16px;">${MESSAGE_RESPONSE}:</strong>
+          <p style="font-size: 14px; color: #555;">${OFFER_VAILATION_ERROR_RESPONSE}</p>
         </div>
-        <p style="font-size: 14px; color: #777;">If you have any questions or queries, please contact our support team.</p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
-        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #777;">${HAVE_QUESTION_ASK_CONTACT_RESPONSE}</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">${NAME_RESPONSE}</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
         <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
       `,
     },
   };
-  emailTemplate.body.message = `Your offer has voided our terms and policy. So, we regret to inform you that your offer and all communications has been deleted by the Swisse 0fferten team.`;
+  emailTemplate.body.message = `${OFFER_VAILATION_ERROR_RESPONSE}`;
   const emailBody = mailGenerator.generate(emailTemplate);
   const mailOptions = {
     from: EMAIL,

@@ -1,4 +1,11 @@
 const NewsModel = require("../models/news-model");
+const {
+  SERVER_ERROR_MESSAGE,
+  DATA_NOT_FOUND_MESSAGE,
+  CREATE_NEWS_SUCCESS_MESSAGE,
+  UPDATE_SUCCESS_MESSAGE,
+  DELETE_SUCCESS_MESSAGE,
+} = require("../utils/response");
 
 // get all news
 async function getAllNews(req, res) {
@@ -17,7 +24,7 @@ async function getAllNews(req, res) {
       news: news,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -43,7 +50,7 @@ async function getAllNewsByAdmin(req, res) {
       news: news,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -55,10 +62,10 @@ async function getsingleNews(req, res) {
     if (exiistNews) {
       res.status(200).json(exiistNews);
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -77,9 +84,9 @@ async function createNews(req, res) {
     });
 
     await newsData.save();
-    res.status(200).json({ message: "Created Successful" });
+    res.status(200).json({ message: CREATE_NEWS_SUCCESS_MESSAGE });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -103,12 +110,12 @@ async function updateNews(req, res) {
       await NewsModel.findByIdAndUpdate(id, newsData, {
         new: true,
       });
-      res.status(200).json({ message: "Saved Successful" });
+      res.status(200).json({ message: UPDATE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json("Data Not Found");
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -119,12 +126,12 @@ async function deleteNews(req, res) {
   try {
     if (exiistNews) {
       await NewsModel.findByIdAndDelete(id);
-      res.status(200).json({ message: "Delete Successful" });
+      res.status(200).json({ message: DELETE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 

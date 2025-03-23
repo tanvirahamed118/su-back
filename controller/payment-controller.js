@@ -1,30 +1,14 @@
-const { Wallee } = require("wallee");
 const PaymentModel = require("../models/payment-model");
 const SellerModel = require("../models/seller-model");
 const TransactionModel = require("../models/transaction-model");
-const spaceId = process.env.SPACEID;
-const apiSecret = process.env.API_SECRET;
 const baseURL = process.env.CORS_URL;
-const userId = process.env.USER_ID;
-const nodemailer = require("nodemailer");
-const Mailgen = require("mailgen");
-const EMAIL = process.env.EMAIL;
-const PASSWORD = process.env.PASSWORD;
-let config = {
-  space_id: Number(spaceId),
-  user_id: Number(userId),
-  api_secret: apiSecret,
-};
-const supportMail = process.env.SUPPORT_MAIL;
-const supportPhone = process.env.SUPPORT_PHONE;
-const corsUrl = process.env.CORS_URL;
-
-// generate uniqe id
-function generateUniqueId() {
-  const timestamp = Date.now().toString(36);
-  const randomPart = Math.random().toString(36).substr(2, 9);
-  return `${timestamp}-${randomPart}`;
-}
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const {
+  SERVER_ERROR_MESSAGE,
+  DATA_NOT_FOUND_MESSAGE,
+  MEMBERSHIP_ALREADY_CREATE_MESSAGE,
+  DELETE_SUCCESS_MESSAGE,
+} = require("../utils/response");
 
 // Get all payment
 async function getAllPayment(req, res) {
@@ -32,7 +16,7 @@ async function getAllPayment(req, res) {
     const data = await PaymentModel.find();
     res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -42,12 +26,12 @@ async function getSinglePayment(req, res) {
   const existMessage = await PaymentModel.findOne({ _id: id });
   try {
     if (!existMessage) {
-      res.status(400).json({ message: "Transection Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     } else {
       res.status(200).json(existMessage);
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -56,13 +40,16 @@ async function createMembershipPayment(req, res) {
   const { title, _id, currentPrice } = req.body;
   const item = req.body;
   const { id } = req.params;
-  const url = `${baseURL}/seller-dashboard/payment-success`;
+  const successUrl = `${baseURL}/seller-dashboard/payment-success`;
+  const failedUrl = `${baseURL}/seller-dashboard/payment-fail`;
   try {
     const existSeller = await SellerModel.findOne({ _id: id });
-    const { memberShip } = existSeller || {};
+    const { memberShip, username, email } = existSeller || {};
 
     if (memberShip) {
-      return res.status(400).json({ message: "Membership Already Created" });
+      return res
+        .status(400)
+        .json({ message: MEMBERSHIP_ALREADY_CREATE_MESSAGE });
     }
     if (item?.plan === "free") {
       const updateMembership = {
@@ -72,263 +59,117 @@ async function createMembershipPayment(req, res) {
       };
 
       await SellerModel.findByIdAndUpdate(id, updateMembership, { new: true });
-      return res.status(200).json({ pageUrl: url });
-    } else {
-      let transactionService = new Wallee.api.TransactionService(config);
-      let transactionPaymentPageService =
-        new Wallee.api.TransactionPaymentPageService(config);
-      let lineItem = new Wallee.model.LineItemCreate();
-      lineItem.name = title;
-      lineItem.uniqueId = generateUniqueId();
-      lineItem.sku = _id;
-      lineItem.quantity = 1;
-      lineItem.amountIncludingTax = currentPrice;
-      lineItem.type = Wallee.model.LineItemType.PRODUCT;
-      let transaction = new Wallee.model.TransactionCreate();
-      transaction.lineItems = [lineItem];
-      transaction.autoConfirmationEnabled = true;
-      transaction.currency = "CHF";
-      transaction.failedUrl = `${baseURL}/seller-dashboard/payment-fail`;
-      transaction.successUrl = `${baseURL}/seller-dashboard/payment-success`;
-
-      const transactionResponse = await transactionService.create(
-        spaceId,
-        transaction
-      );
-      let transactionCreate = transactionResponse.body;
-
-      const paymentPageResponse =
-        await transactionPaymentPageService.paymentPageUrl(
-          spaceId,
-          transactionCreate.id
-        );
-      await TransactionModel.create({
-        transactionId: transactionCreate.id,
-        sellerId: id,
-        memberShip: item,
-        cost: currentPrice,
-        status: "pending",
-      });
-      await SellerModel.findByIdAndUpdate(
-        id,
-        {
-          memberShipStatus: "not-complete",
-        },
-        { new: true }
-      );
-      let pageUrl = paymentPageResponse.body;
-      return res.status(200).json({ pageUrl: pageUrl });
+      return res.status(200).json({ pageUrl: successUrl });
     }
-  } catch (error) {
-    return res.status(500).json({ message: "Server Error!", error });
-  }
-}
-
-// create membership payment
-async function createdemoPayment(req, res) {
-  const { title, _id, currentPrice } = req.body;
-  const item = req.body;
-  try {
-    let transactionService = new Wallee.api.TransactionService(config);
-    let transactionPaymentPageService =
-      new Wallee.api.TransactionPaymentPageService(config);
-    let lineItem = new Wallee.model.LineItemCreate();
-    lineItem.name = title;
-    lineItem.uniqueId = generateUniqueId();
-    lineItem.sku = _id;
-    lineItem.quantity = 1;
-    lineItem.amountIncludingTax = currentPrice;
-    lineItem.type = Wallee.model.LineItemType.PRODUCT;
-    let transaction = new Wallee.model.TransactionCreate();
-    transaction.lineItems = [lineItem];
-    transaction.autoConfirmationEnabled = true;
-    transaction.currency = "CHF";
-    transaction.failedUrl = `${baseURL}/seller-dashboard/payment-fail`;
-    transaction.successUrl = `${baseURL}/seller-dashboard/payment-success`;
-    const transactionResponse = await transactionService.create(
-      spaceId,
-      transaction
-    );
-    let transactionCreate = transactionResponse.body;
-
-    const paymentPageResponse =
-      await transactionPaymentPageService.paymentPageUrl(
-        spaceId,
-        transactionCreate.id
-      );
+    const existingCustomer = await stripe.customers.list({ email });
+    let customer;
+    if (existingCustomer.data.length > 0) {
+      customer = existingCustomer.data[0]; // Use existing customer
+    } else {
+      customer = await stripe.customers.create({ email, name: username });
+    }
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      customer: customer.id,
+      line_items: [
+        {
+          price_data: {
+            currency: "CHF",
+            product_data: {
+              name: title,
+              description: `Willkommen auf der Stripe-Checkout-Seite. Sie kaufen einen ${title} und der Planpreis beträgt ${currentPrice}. Nach der Zahlung werden Sie zur erfolgreichen Seite weitergeleitet. Vielen Dank`,
+              images: [`${process.env.IMAGE_URL}`],
+            },
+            unit_amount: currentPrice * 100,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      invoice_creation: { enabled: true },
+      success_url: successUrl,
+      cancel_url: failedUrl,
+      metadata: {
+        sellerId: id,
+        planId: _id,
+      },
+    });
     await TransactionModel.create({
-      transactionId: transactionCreate.id,
-      memberShip: item,
+      transactionId: session.id,
+      sellerId: id,
+      memberShip: req.body,
       cost: currentPrice,
       status: "pending",
     });
-
-    let pageUrl = paymentPageResponse.body;
-    return res.status(200).json({ pageUrl: pageUrl });
+    await SellerModel.findByIdAndUpdate(
+      id,
+      { memberShipStatus: "not-complete" },
+      { new: true }
+    );
+    return res.status(200).json({ pageUrl: session.url });
   } catch (error) {
-    return res.status(500).json({ message: "Server Error!", error });
+    return res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
 // create credit payment
 async function createCreditsPayment(req, res) {
-  const { id, credit, price, sellerId } = req.body;
-  const item = req.body;
-
+  const { id, credits, price, sellerId } = req.body;
+  const successUrl = `${baseURL}/seller-dashboard/seller-credit/payment-success`;
+  const failedUrl = `${baseURL}/seller-dashboard/seller-credit/payment-fail`;
+  const existSeller = await SellerModel.findOne({ _id: sellerId });
+  const { username, email } = existSeller || {};
   try {
-    let transactionService = new Wallee.api.TransactionService(config);
-    let transactionPaymentPageService =
-      new Wallee.api.TransactionPaymentPageService(config);
-    let lineItem = new Wallee.model.LineItemCreate();
-    lineItem.name = `${credit} credit`;
-    lineItem.uniqueId = generateUniqueId();
-    lineItem.sku = id;
-    lineItem.quantity = 1;
-    lineItem.amountIncludingTax = price;
-    lineItem.type = Wallee.model.LineItemType.PRODUCT;
+    const existingCustomer = await stripe.customers.list({ email });
+    let customer;
+    if (existingCustomer.data.length > 0) {
+      customer = existingCustomer.data[0]; // Use existing customer
+    } else {
+      customer = await stripe.customers.create({ email, name: username });
+    }
 
-    let transaction = new Wallee.model.TransactionCreate();
-    transaction.lineItems = [lineItem];
-    transaction.autoConfirmationEnabled = true;
-    transaction.currency = "CHF";
-    transaction.failedUrl = `${baseURL}/seller-dashboard/seller-credit/payment-fail`;
-    transaction.successUrl = `${baseURL}/seller-dashboard/seller-credit/payment-success`;
-    const transactionResponse = await transactionService.create(
-      spaceId,
-      transaction
-    );
-    let transactionCreate = transactionResponse.body;
-    const paymentPageResponse =
-      await transactionPaymentPageService.paymentPageUrl(
-        spaceId,
-        transactionCreate.id
-      );
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      customer: customer.id,
+      line_items: [
+        {
+          price_data: {
+            currency: "CHF",
+            product_data: {
+              name: `${credits} Credit`,
+              description: `Willkommen auf der Stripe-Checkout-Seite. Sie kaufen ${credits} Credits für CHF ${price}. Anschließend werden Sie auf die Seite mit den erfolgreichen Kaufabwicklungen weitergeleitet. Vielen Dank.`,
+              images: [`${process.env.IMAGE_URL}`],
+            },
+            unit_amount: price * 100,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      invoice_creation: { enabled: true },
+      success_url: successUrl,
+      cancel_url: failedUrl,
+      metadata: {
+        sellerId: sellerId,
+        creditId: id,
+        additional_info: `Purchase of ${credits} credits`,
+      },
+    });
     await TransactionModel.create({
-      transactionId: transactionCreate.id,
+      transactionId: session.id,
       sellerId: sellerId,
-      credits: item,
+      memberShip: req.body,
       cost: price,
       status: "pending",
     });
-    const updateSeller = {
-      pendingCredits: credit,
-    };
-
-    await SellerModel.findByIdAndUpdate(sellerId, updateSeller, { new: true });
-    let pageUrl = paymentPageResponse.body;
-    return res.status(200).json({ pageUrl: pageUrl });
+    await SellerModel.findByIdAndUpdate(
+      sellerId,
+      { pendingCredits: credits },
+      { new: true }
+    );
+    return res.status(200).json({ pageUrl: session.url });
   } catch (error) {
-    return res.status(500).json({ message: "Server Error!", error });
-  }
-}
-
-// create membership transaction
-async function createMembershipTransaction(req, res) {
-  const { entityId, state } = req.body;
-  const transaction = await TransactionModel.findOne({
-    transactionId: entityId,
-  });
-
-  if (!transaction) {
-    return res.status(404).json({ error: "Transaction Not Found" });
-  }
-  const { sellerId, memberShip } = transaction || {};
-  const { credit } = memberShip || {};
-  const id = sellerId;
-  const existSeller = await SellerModel.findOne({ _id: id });
-  const { username, email } = existSeller || {};
-  const membershipComplete = {
-    memberShipStatus: "complete",
-    credits: credit,
-    memberShip: memberShip,
-  };
-  const membershipFailed = {
-    memberShipStatus: "failed",
-    credits: 0,
-    memberShip: memberShip,
-  };
-
-  try {
-    if (state === "FULFILL") {
-      await SellerModel.findByIdAndUpdate(id, membershipComplete, {
-        new: true,
-      });
-      await sendEmailNotification(
-        username,
-        email,
-        "Your payment has complete",
-        `Your payment is complete. You have received your membership. Now you can bid on any jobs. Happy Bidding.`,
-        "GOOD NEWS: your membership is updated."
-      );
-    }
-    if (state === "FAILED") {
-      await SellerModel.findByIdAndUpdate(id, membershipFailed, {
-        new: true,
-      });
-      await sendEmailNotification(
-        username,
-        email,
-        "Your payment has failed.",
-        `We are sorry to say, Your payment has failed. Please contact our support as soon as possible if you have already paid.`,
-        "Sorry your payment has failed."
-      );
-    }
-    res.status(200).json({ message: "Webhook received" });
-  } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
-  }
-}
-
-// create credit transaction
-async function createCreditTransaction(req, res) {
-  const { entityId, state } = req.body;
-  const transaction = await TransactionModel.findOne({
-    transactionId: entityId,
-  });
-
-  if (!transaction) {
-    return res.status(404).json({ error: "Transaction Not Found" });
-  }
-  const { sellerId, credits } = transaction || {};
-  const { credit } = credits || {};
-  const id = sellerId;
-  const existSeller = await SellerModel.findOne({ _id: id });
-  const creditComplete = {
-    credits: existSeller?.credits + credit,
-    pendingCredits: 0,
-  };
-  const creditFailed = {
-    credits: 0,
-  };
-  const { username, email } = existSeller || {};
-  try {
-    if (state === "FULFILL") {
-      await SellerModel.findByIdAndUpdate(id, creditComplete, {
-        new: true,
-      });
-      await sendEmailNotification(
-        username,
-        email,
-        "Your payment has complete",
-        `Your payment is complete. You have received ${credit} credits. Now you can bid more jobs. Happy Bidding.`,
-        `GOOD NEWS: You have received ${credit} credits`
-      );
-    }
-    if (state === "FAILED") {
-      await SellerModel.findByIdAndUpdate(id, creditFailed, {
-        new: true,
-      });
-      await sendEmailNotification(
-        username,
-        email,
-        "Your payment has failed",
-        `We are sorry to say your payment has failed. Please contact our support as soon as possible if you have already paid.`,
-        `GOOD NEWS: You have received ${credit} credits`
-      );
-    }
-    res.status(200).json({ message: "Webhook received" });
-  } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    return res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -339,12 +180,12 @@ async function deletePayment(req, res) {
   try {
     if (existMessage) {
       await PaymentModel.findOneAndDelete(id);
-      res.status(200).json({ message: "Transection Deleted!" });
+      res.status(200).json({ message: DELETE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Transection Does Not Exist" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -354,52 +195,8 @@ async function getAllTransactions(req, res) {
     let existtransac = await TransactionModel.find();
     res.status(200).json(existtransac);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
-}
-
-// send email notifications
-async function sendEmailNotification(name, email, subject, message, introMSG) {
-  const transporter = nodemailer.createTransport({
-    service: "Gmail",
-    auth: {
-      user: EMAIL,
-      pass: PASSWORD,
-    },
-  });
-  const mailGenerator = new Mailgen({
-    theme: "default",
-    product: {
-      name: "Suisse-Offerten",
-      link: "https://suisse-offerten.ch/",
-    },
-  });
-  const emailTemplate = {
-    body: {
-      name: `${name}`,
-      intro: `${introMSG}`,
-      outro: `
-        <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Message:</strong>
-          <p style="font-size: 14px; color: #555;">${message}</p>
-        </div>
-        <p style="font-size: 14px; color: #777;">Please login to your account to reply to this message.</p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
-        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
-        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
-        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
-      `,
-    },
-  };
-  emailTemplate.body.message = `${message}`;
-  const emailBody = mailGenerator.generate(emailTemplate);
-  const mailOptions = {
-    from: EMAIL,
-    to: email,
-    subject: subject,
-    html: emailBody,
-  };
-  await transporter.sendMail(mailOptions);
 }
 
 module.exports = {
@@ -409,7 +206,4 @@ module.exports = {
   deletePayment,
   createCreditsPayment,
   getAllTransactions,
-  createMembershipTransaction,
-  createCreditTransaction,
-  createdemoPayment,
 };

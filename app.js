@@ -17,12 +17,21 @@ const offerRouter = require("./routes/offer-router");
 const membershipRouter = require("./routes/membership-router");
 const adminRouter = require("./routes/admin-router");
 const creditRouter = require("./routes/credit-router");
+const invoiceRouter = require("./routes/invoice-router");
 const CORS_URL = process.env.CORS_URL;
 const DASHBOARD_URL = process.env.DASHBOARD_URL;
 const allowedOrigins = [CORS_URL, DASHBOARD_URL];
 const cron = require("node-cron");
+const {
+  CORS_ERROR_MESSAGE,
+  SERVER_ERROR_MESSAGE,
+  ROUTE_NOT_FOUND_MESSAGE,
+  HOME_ROUTE_MESSAGE,
+} = require("./utils/response");
+const WebhookRouter = require("./routes/webhook.router");
 
 // App Use Middlewares
+app.use("/webhook", WebhookRouter);
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ limit: "100mb", extended: true }));
 app.use("/public/uploads", express.static(__dirname + "/public/uploads"));
@@ -33,7 +42,7 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        callback(new Error(CORS_ERROR_MESSAGE));
       }
     },
     credentials: true,
@@ -58,22 +67,25 @@ app.use("/auth/offer", offerRouter);
 app.use("/auth/membership", membershipRouter);
 app.use("/auth/admin", adminRouter);
 app.use("/auth/credit", creditRouter);
+app.use("/auth/invoice", invoiceRouter);
 
 // Home Route
 app.get("/", auth, (req, res) => {
-  res.send("Home Route");
+  res.send(HOME_ROUTE_MESSAGE);
 });
+
 // Route not founf
 app.use((req, res, next) => {
-  res.send("Route Not Found");
+  res.send(ROUTE_NOT_FOUND_MESSAGE);
   next();
 });
+
 // Server error
 app.use((req, res, next, err) => {
   if (err) {
     return err;
   } else {
-    res.send("Server Error");
+    res.send(SERVER_ERROR_MESSAGE);
   }
   next();
 });

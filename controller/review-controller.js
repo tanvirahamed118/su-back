@@ -4,6 +4,30 @@ const JobModel = require("../models/job-model");
 const OfferModel = require("../models/offer-model");
 const nodemailer = require("nodemailer");
 const Mailgen = require("mailgen");
+const {
+  SERVER_ERROR_MESSAGE,
+  DATA_NOT_FOUND_MESSAGE,
+  REVIEW_ALREADY_SUBMIT_MESSAGE,
+  REVIEW_SUBMIT_SUCCESS_MESSAGE,
+  UPDATE_SUCCESS_MESSAGE,
+  DELETE_SUCCESS_MESSAGE,
+  YOU_HAVE_ALREADY_LIKE_MESSAGE,
+  LIKED_SUCCESS_MESSAGE,
+} = require("../utils/response");
+const {
+  YOU_HAVE_GET_RESPONSE,
+  START_REVIEW_FROM_RESPONSE,
+  REVIEW_CREATOR_RESPONSE,
+  REVIEW_RESPONSE,
+  REVIEW_RATING_RESPONSE,
+  NAME_RESPONSE,
+  DOMAIN_URL_RESPONSE,
+  YOU_HAVE_RECIVE_RESPONSE,
+  MESSAGE_RESPONSE,
+  LOGIN_DASHBOARD_TO_SEE_REVIEW_RESPONSE,
+  SINGNATURE_RESPONSE,
+  OUTRO_RESPONSE,
+} = require("../utils/email.response");
 const EMAIL = process.env.EMAIL;
 const PASSWORD = process.env.PASSWORD;
 const supportMail = process.env.SUPPORT_MAIL;
@@ -16,7 +40,7 @@ async function getAllReviewsDefault(req, res) {
     const reviews = await ReviewModel.find();
     res.status(200).json(reviews);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -46,7 +70,7 @@ async function getAllReviewBySellerAdmin(req, res) {
       reviews,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -76,7 +100,7 @@ async function getAllReviewByClientAdmin(req, res) {
       reviews,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -104,7 +128,7 @@ async function getAllReview(req, res) {
       reviews,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -132,7 +156,7 @@ async function getAllReviewByAdmin(req, res) {
       reviews,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -145,10 +169,10 @@ async function getUserReview(req, res) {
     if (existReview) {
       res.status(200).json(existReview);
     } else {
-      res.status(400).json("Data Not Found");
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -160,10 +184,10 @@ async function getsingleReview(req, res) {
     if (existReview) {
       res.status(200).json(existReview);
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -177,7 +201,7 @@ async function createReview(req, res) {
   try {
     const existIsReview = await ReviewModel.findOne({ sellerId, jobId });
     if (existIsReview) {
-      return res.status(400).json({ message: "Review Already Submited" });
+      return res.status(400).json({ message: REVIEW_ALREADY_SUBMIT_MESSAGE });
     }
     const reviewData = new ReviewModel({
       clinetName,
@@ -211,8 +235,8 @@ async function createReview(req, res) {
     await sendEmailNotification(
       existSeller.username,
       existSeller.email,
-      `You have get ${rating} start review from ${clinetName}`,
-      `Review Creator: ${clinetName}<br> Review: ${review} <br> Review Rating: ${rating}`,
+      `${YOU_HAVE_GET_RESPONSE} ${rating} ${START_REVIEW_FROM_RESPONSE} ${clinetName}`,
+      `${REVIEW_CREATOR_RESPONSE}: ${clinetName}<br> ${REVIEW_RESPONSE}: ${review} <br> ${REVIEW_RATING_RESPONSE}: ${rating}`,
       clinetName
     );
     const updateStatus = {
@@ -221,9 +245,9 @@ async function createReview(req, res) {
 
     await SellerModel.findByIdAndUpdate(sellerId, updateSeller, { new: true });
     await OfferModel.findByIdAndUpdate(offerId, updateStatus, { new: true });
-    res.status(200).json({ message: "Review Submited Successful" });
+    res.status(200).json({ message: REVIEW_SUBMIT_SUCCESS_MESSAGE });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -245,23 +269,24 @@ async function sendEmailNotification(
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
-      name: "Suisse-Offerten",
-      link: "https://suisse-offerten.ch/",
+      name: NAME_RESPONSE,
+      link: DOMAIN_URL_RESPONSE,
+      copyright: OUTRO_RESPONSE,
     },
   });
 
   const emailTemplate = {
     body: {
       name: `${name}`,
-      intro: `You have received a new message from ${receiveName}:`,
+      intro: `${YOU_HAVE_RECIVE_RESPONSE} ${receiveName}:`,
+      signature: SINGNATURE_RESPONSE,
       outro: `
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Message:</strong>
+          <strong style="font-size: 16px;">${MESSAGE_RESPONSE}:</strong>
           <p style="font-size: 14px; color: #555;">${message}</p>
         </div>
-        <p style="font-size: 14px; color: #777;">Please login to your account to see your new reviews.</p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
-        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #777;">${LOGIN_DASHBOARD_TO_SEE_REVIEW_RESPONSE}</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">${NAME_RESPONSE}</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
         <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
       `,
@@ -292,12 +317,12 @@ async function updateReview(req, res) {
       await ReviewModel.findByIdAndUpdate(id, reviewData, {
         new: true,
       });
-      res.status(200).json({ message: "Saved Successful" });
+      res.status(200).json({ message: UPDATE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json("Data Not Found");
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -314,12 +339,12 @@ async function updateReviewStatus(req, res) {
       await ReviewModel.findByIdAndUpdate(id, reviewData, {
         new: true,
       });
-      res.status(200).json({ message: "Saved Successful" });
+      res.status(200).json({ message: UPDATE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json("Data Not Found");
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -330,12 +355,12 @@ async function deleteReview(req, res) {
   try {
     if (existReview) {
       await ReviewModel.findByIdAndDelete(id);
-      res.status(200).json({ message: "Delete Successful" });
+      res.status(200).json({ message: DELETE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -348,7 +373,7 @@ async function updateReviewUseful(req, res) {
     (item) => item.usefulId === clientId
   );
   if (existUseful?.usefulId) {
-    return res.status(400).json({ message: "You Have Already Liked" });
+    return res.status(400).json({ message: YOU_HAVE_ALREADY_LIKE_MESSAGE });
   }
   try {
     if (existReview) {
@@ -364,12 +389,12 @@ async function updateReviewUseful(req, res) {
       await ReviewModel.findByIdAndUpdate(id, reviewData, {
         new: true,
       });
-      res.status(200).json({ message: "Liked Successful" });
+      res.status(200).json({ message: LIKED_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 

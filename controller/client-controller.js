@@ -11,6 +11,50 @@ const SECRET_KEY = process.env.SECRET_KEY;
 const nodemailer = require("nodemailer");
 const Mailgen = require("mailgen");
 const jwt = require("jsonwebtoken");
+const {
+  SERVER_ERROR_MESSAGE,
+  DATA_NOT_FOUND_MESSAGE,
+  EMAIL_ALREADY_EXIST_MESSAGE,
+  USERNAME_ALREADY_EXIST_MESSAGE,
+  REGISTRATION_VERIFY_OTP_MESSAGE,
+  ALREADY_VERIFY_MESSAGE,
+  VERIFICATION_SUCCESS_MESSAGE,
+  ENTER_WRONG_CODE_MESSAGE,
+  VERIFY_YOUR_ACCOUNT_MESSAGE,
+  INCORRECT_PASSWORD_MESSAGE,
+  LOGIN_SUCCESSFUL_MESSAGE,
+  OTP_SEND_SUCCESS_MESSAGE,
+  TOKEN_EXPIRED_MESSAGE,
+  OTP_MATCH_SUCCESS_MESSAGE,
+  OTP_NOT_MATCH_MESSAGE,
+  PASSWORD_CHANGE_SUCCESS_MESSAGE,
+  UPDATE_SUCCESS_MESSAGE,
+  DELETE_SUCCESS_MESSAGE,
+  ACCOUNT_CREATE_SUCCESS_MESSAGE,
+  LINK_SEND_SUCCESS_MESSAGE,
+} = require("../utils/response");
+const {
+  NAME_RESPONSE,
+  DOMAIN_URL_RESPONSE,
+  WELCOME_DATA_RESPONSE,
+  GET_VERIFICATION_CODE_RESPONSE,
+  EMAIL_VERIFICATION_CODE_RESPONSE,
+  NEW_JOB_POSTED_RESPONSE,
+  JOB_TITLE_RESPONSE,
+  JOB_DESCRIPTION_RESPONSE,
+  JOB_LOCATION_RESPONSE,
+  JOB_NUMBER_RESPONSE,
+  SEE_JOBS_RESPONSE,
+  RESET_PASSWORD_RESPONSE,
+  YOUR_OTP_RESPONSE,
+  USE_OTP_TO_CHANGE_PASSWORD_RESPONSE,
+  CHANGE_PASSWORD_RESPONSE,
+  CHANGE_PASSWORD_DATA_MESSAGE_RESPONSE,
+  GET_RESET_PASSWORD_LINK_RESPONSE,
+  CHANGE_PASSWORD_LINK_RESPONSE,
+  OUTRO_RESPONSE,
+  SINGNATURE_RESPONSE,
+} = require("../utils/email.response");
 const supportMail = process.env.SUPPORT_MAIL;
 const supportPhone = process.env.SUPPORT_PHONE;
 const corsUrl = process.env.CORS_URL;
@@ -21,7 +65,7 @@ async function getClient(req, res) {
     const data = await ClientModel.find();
     res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -49,7 +93,7 @@ async function getAllClientsByAdmin(req, res) {
       clients: clients,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -59,12 +103,12 @@ async function getClientById(req, res) {
   const existClient = await ClientModel.findOne({ _id: id });
   try {
     if (!existClient) {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     } else {
       res.status(200).json(existClient);
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -74,12 +118,12 @@ async function getClientByEmail(req, res) {
   const existClient = await ClientModel.findOne({ email: jobEmail });
   try {
     if (!existClient) {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     } else {
       res.status(200).json(existClient);
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -104,10 +148,10 @@ async function register(req, res) {
   });
   try {
     if (existCleintByEmail || existSeller) {
-      return res.status(404).json({ message: "Email Already Exist" });
+      return res.status(404).json({ message: EMAIL_ALREADY_EXIST_MESSAGE });
     }
     if (existCleintByUsername) {
-      return res.status(404).json({ message: "Username Already Exist" });
+      return res.status(404).json({ message: USERNAME_ALREADY_EXIST_MESSAGE });
     }
     bcrypt.hash(password, 10, async function (err, hash) {
       const newClient = new ClientModel({
@@ -126,11 +170,11 @@ async function register(req, res) {
       await sendVerificationCode(username, email);
       res.status(201).json({
         client: newClient,
-        message: "Registration Successful, Please Check Your Email",
+        message: REGISTRATION_VERIFY_OTP_MESSAGE,
       });
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -154,14 +198,16 @@ async function sendVerificationCode(companyName, email) {
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
-      name: `Suisse-Offerten`,
-      link: "https://suisse-offerten.ch/",
+      name: NAME_RESPONSE,
+      link: DOMAIN_URL_RESPONSE,
+      copyright: OUTRO_RESPONSE,
     },
   });
   const emailTemplate = {
     body: {
       name: `${companyName}`,
-      intro: `Welcome to Suisse-Offerten! Please use the following verification code to verify your email address:`,
+      intro: WELCOME_DATA_RESPONSE,
+      signature: SINGNATURE_RESPONSE,
       table: {
         data: [
           {
@@ -170,9 +216,8 @@ async function sendVerificationCode(companyName, email) {
         ],
       },
       outro: `
-        <p style="font-size: 14px; color: #777;">Please check your email, you have receive verification code</p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
-        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #777;">${GET_VERIFICATION_CODE_RESPONSE}</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">${NAME_RESPONSE}</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
         <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
       `,
@@ -182,7 +227,7 @@ async function sendVerificationCode(companyName, email) {
   const mailOptions = {
     from: EMAIL,
     to: email,
-    subject: "Email Verification Code",
+    subject: EMAIL_VERIFICATION_CODE_RESPONSE,
     html: emailBody,
   };
 
@@ -207,7 +252,7 @@ async function VerifyCodeCheck(req, res) {
         ],
       });
       if (existClient?.status === "verified") {
-        return res.status(500).json({ message: "Already Verified" });
+        return res.status(500).json({ message: ALREADY_VERIFY_MESSAGE });
       }
 
       const sellerEmails = matchingSellers.map((seller) => seller.email);
@@ -231,12 +276,12 @@ async function VerifyCodeCheck(req, res) {
           sellerNames
         );
       }
-      res.status(200).json({ message: "Verification Successful" });
+      res.status(200).json({ message: VERIFICATION_SUCCESS_MESSAGE });
     } else {
-      res.status(500).json({ message: "Enter Wrong Code" });
+      res.status(500).json({ message: ENTER_WRONG_CODE_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -260,36 +305,36 @@ async function sendJobEmails(
   const mailGenerator = new Mailgen({
     theme: "default",
     product: {
-      name: "Suiess-offerten",
-      link: "https://suisse-offerten.ch/",
+      name: NAME_RESPONSE,
+      link: DOMAIN_URL_RESPONSE,
+      copyright: OUTRO_RESPONSE,
     },
   });
   for (let i = 0; i < sellerNames.length; i++) {
     const emailTemplate = {
       body: {
         name: sellerNames[i],
-        intro: `A new job has been posted: ${jobTitle}`,
-
+        intro: `${NEW_JOB_POSTED_RESPONSE}: ${jobTitle}`,
+        signature: SINGNATURE_RESPONSE,
         outro: `
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Job Title:</strong>
+          <strong style="font-size: 16px;">${JOB_TITLE_RESPONSE}:</strong>
           <p style="font-size: 14px; color: #555;">${jobTitle}</p>
         </div>
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Job Description:</strong>
+          <strong style="font-size: 16px;">${JOB_DESCRIPTION_RESPONSE}:</strong>
           <p style="font-size: 14px; color: #555;">${jobDescription}</p>
         </div>
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Job Location:</strong>
+          <strong style="font-size: 16px;">${JOB_LOCATION_RESPONSE}:</strong>
           <p style="font-size: 14px; color: #555;">${jobLocation}</p>
         </div>
         <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
-          <strong style="font-size: 16px;">Job Number:</strong>
+          <strong style="font-size: 16px;">${JOB_NUMBER_RESPONSE}:</strong>
           <p style="font-size: 14px; color: #555;">${uniqueNumber}</p>
         </div>
-        <p style="font-size: 14px; color: #777;">Visit this link to see recent jobs <a href="${corsUrl}/search-job">See jobs</a></p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
-        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+        <p style="font-size: 14px; color: #777;">Visit this link to see recent jobs <a href="${corsUrl}/search-job">${SEE_JOBS_RESPONSE}</a></p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">${NAME_RESPONSE}</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
         <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
       `,
@@ -301,7 +346,7 @@ async function sendJobEmails(
     const message = {
       from: EMAIL,
       to: sellerEmails[i],
-      subject: `New Job Posted: ${jobTitle}`,
+      subject: `${NEW_JOB_POSTED_RESPONSE}: ${jobTitle}`,
       html: emailBody,
     };
     await transporter.sendMail(message);
@@ -327,18 +372,18 @@ async function login(req, res) {
 
     if (email) {
       if (!existClientByEmail) {
-        return res.status(404).json({ message: "Data Not Found" });
+        return res.status(404).json({ message: DATA_NOT_FOUND_MESSAGE });
       }
       if (existClientByEmail?.status === "pending") {
-        return res.status(404).json({ message: "Please Verify Your Account" });
+        return res.status(404).json({ message: VERIFY_YOUR_ACCOUNT_MESSAGE });
       }
     }
     if (username) {
       if (!existClientByUsername) {
-        return res.status(404).json({ message: "Data Not Found" });
+        return res.status(404).json({ message: DATA_NOT_FOUND_MESSAGE });
       }
       if (existClientByUsername?.status === "pending") {
-        return res.status(404).json({ message: "Please Verify Your Account" });
+        return res.status(404).json({ message: VERIFY_YOUR_ACCOUNT_MESSAGE });
       }
     }
     const matchpassword = await bcrypt.compare(
@@ -348,7 +393,7 @@ async function login(req, res) {
         : existClientByUsername.password
     );
     if (!matchpassword) {
-      return res.status(400).json({ message: "Incorrect Password" });
+      return res.status(400).json({ message: INCORRECT_PASSWORD_MESSAGE });
     }
 
     const token = jwt.sign(
@@ -365,10 +410,10 @@ async function login(req, res) {
     res.status(200).json({
       client: existClientByEmail ? existClientByEmail : existClientByUsername,
       token: token,
-      message: "Login Successful",
+      message: LOGIN_SUCCESSFUL_MESSAGE,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -396,24 +441,25 @@ async function otpSend(req, res) {
       let mailGenarator = new Mailgen({
         theme: "default",
         product: {
-          name: "suisse-offerten",
-          link: "https://suisse-offerten.ch/",
+          name: NAME_RESPONSE,
+          link: DOMAIN_URL_RESPONSE,
+          copyright: OUTRO_RESPONSE,
         },
       });
       let response = {
         body: {
           name: existClient?.email,
-          intro: "Reset your password",
+          intro: RESET_PASSWORD_RESPONSE,
+          signature: SINGNATURE_RESPONSE,
           table: {
             data: [
               {
-                Message: `your otp is ${otp}`,
+                Message: `${YOUR_OTP_RESPONSE}: ${otp}`,
               },
             ],
           },
-          outro: `<p style="font-size: 14px; color: #777;">Please use this OTP code to change your password.</p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
-        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+          outro: `<p style="font-size: 14px; color: #777;">${USE_OTP_TO_CHANGE_PASSWORD_RESPONSE}</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">${NAME_RESPONSE}</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
         <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>`,
         },
@@ -422,19 +468,21 @@ async function otpSend(req, res) {
       let message = {
         from: EMAIL,
         to: req.body.email,
-        subject: "Reset Password",
+        subject: RESET_PASSWORD_RESPONSE,
         html: mail,
       };
       transport.sendMail(message).then(() => {
-        return res
-          .status(200)
-          .json({ email: email, message: "OTP Send", status: "ok" });
+        return res.status(200).json({
+          email: email,
+          message: OTP_SEND_SUCCESS_MESSAGE,
+          status: "ok",
+        });
       });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -447,15 +495,15 @@ async function otpCheck(req, res) {
       let currentTime = new Date().getTime();
       let diffrenceTime = data.expireIn - currentTime;
       if (diffrenceTime < 0) {
-        res.status(500).json({ message: "Token Expired" });
+        res.status(500).json({ message: TOKEN_EXPIRED_MESSAGE });
       } else {
-        res.status(200).json({ message: "OTP Matched" });
+        res.status(200).json({ message: OTP_MATCH_SUCCESS_MESSAGE });
       }
     } else {
-      res.status(500).json({ message: "OTP Does Not Match" });
+      res.status(500).json({ message: OTP_NOT_MATCH_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -468,13 +516,13 @@ async function changePassword(req, res) {
       bcrypt.hash(password, 10, async function (err, hash) {
         client.password = hash;
         await client.save();
-        res.status(200).json({ message: "Password Changed" });
+        res.status(200).json({ message: PASSWORD_CHANGE_SUCCESS_MESSAGE });
       });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -488,13 +536,13 @@ async function changePasswordByClient(req, res) {
       bcrypt.hash(password, 10, async function (err, hash) {
         client.password = hash;
         await client.save();
-        res.status(200).json({ message: "Password Changed" });
+        res.status(200).json({ message: PASSWORD_CHANGE_SUCCESS_MESSAGE });
       });
     } else {
-      res.status(400).json({ message: "Data Not Found!" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -533,12 +581,12 @@ async function updateClient(req, res) {
       });
       res
         .status(200)
-        .json({ client: updateClient, message: "Update Successful" });
+        .json({ client: updateClient, message: UPDATE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -555,12 +603,12 @@ async function updateClientStatus(req, res) {
       await ClientModel.findByIdAndUpdate(id, newClientStatus, {
         new: true,
       });
-      res.status(200).json({ message: "Update Successful" });
+      res.status(200).json({ message: UPDATE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -576,12 +624,12 @@ async function updateClientStatusByAdmin(req, res) {
       await ClientModel.findByIdAndUpdate(id, emailVerify, {
         new: true,
       });
-      res.status(200).json({ message: "Update Successful" });
+      res.status(200).json({ message: UPDATE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -592,12 +640,12 @@ async function deleteClient(req, res) {
   try {
     if (existClient) {
       await ClientModel.findByIdAndDelete(id);
-      res.status(200).json({ message: "Account Deleted" });
+      res.status(200).json({ message: DELETE_SUCCESS_MESSAGE });
     } else {
-      res.status(400).json({ message: "Data Not Exist" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -614,10 +662,10 @@ async function createClientByAdmin(req, res) {
   });
   try {
     if (existClientByEmail || existSeller) {
-      return res.status(404).json({ message: "Email Already Exist" });
+      return res.status(404).json({ message: EMAIL_ALREADY_EXIST_MESSAGE });
     }
     if (existClientByUsername) {
-      return res.status(404).json({ message: "Username Already Exist" });
+      return res.status(404).json({ message: USERNAME_ALREADY_EXIST_MESSAGE });
     }
     bcrypt.hash(password, 10, async function (err, hash) {
       const createClient = await new ClientModel({
@@ -627,10 +675,10 @@ async function createClientByAdmin(req, res) {
         password: hash,
       });
       await createClient.save();
-      res.status(201).json({ message: "Account Created Successful" });
+      res.status(201).json({ message: ACCOUNT_CREATE_SUCCESS_MESSAGE });
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
@@ -651,24 +699,25 @@ async function sendResetPasswordLink(req, res) {
       let mailGenarator = new Mailgen({
         theme: "default",
         product: {
-          name: "Suisse-Offerten",
-          link: "https://suisse-offerten.ch/",
+          name: NAME_RESPONSE,
+          link: DOMAIN_URL_RESPONSE,
+          copyright: OUTRO_RESPONSE,
         },
       });
       let response = {
         body: {
           name: existSeller?.email,
-          intro: "Change your password",
+          intro: CHANGE_PASSWORD_RESPONSE,
+          signature: SINGNATURE_RESPONSE,
           table: {
             data: [
               {
-                Message: `Hello, If you don't remember your password and you did not get any email to reset password, you can use this like to reset your password. Link: https://suisse-offerten.ch/client-change-password`,
+                Message: `${CHANGE_PASSWORD_DATA_MESSAGE_RESPONSE}. URL: https://suisse-offerten.ch/client-change-password`,
               },
             ],
           },
-          outro: `<p style="font-size: 14px; color: #777;">Please check your email, you have receive reset password link</p>
-        <p style="font-size: 14px; color: #777; margin-top: 20px;">Suisse-Offerten</p>
-        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">Suisse-Offerten</a></p>
+          outro: `<p style="font-size: 14px; color: #777;">${GET_RESET_PASSWORD_LINK_RESPONSE}</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">${NAME_RESPONSE}</a></p>
         <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
         <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>`,
         },
@@ -677,21 +726,21 @@ async function sendResetPasswordLink(req, res) {
       let message = {
         from: EMAIL,
         to: req.body.email,
-        subject: "Change Password Link",
+        subject: CHANGE_PASSWORD_LINK_RESPONSE,
         html: mail,
       };
       transport.sendMail(message).then(() => {
         return res.status(200).json({
           email: email,
-          message: "Link Send Successful",
+          message: LINK_SEND_SUCCESS_MESSAGE,
           status: "ok",
         });
       });
     } else {
-      res.status(400).json({ message: "Data Not Found" });
+      res.status(400).json({ message: DATA_NOT_FOUND_MESSAGE });
     }
   } catch (error) {
-    res.status(500).json({ message: "Server Error!", error });
+    res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
 }
 
