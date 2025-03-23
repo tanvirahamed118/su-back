@@ -1,4 +1,0 @@
-user:Kawsar@3
-pass:Kawsar@3
-tplink ip: 192.168.0.1
-netis ip: 192.168.0.1

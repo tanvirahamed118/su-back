@@ -19,13 +19,15 @@ const {
 const supportMail = process.env.SUPPORT_MAIL;
 const supportPhone = process.env.SUPPORT_PHONE;
 const corsUrl = process.env.CORS_URL;
-const endpointSecret = process.env.WEBHOOK_SECRET;
+const membershipSecret = process.env.MEMBERSHIP_WEBHOOK_SECRET;
+const creditSecret = process.env.CREDIT_WEBHOOK_SECRET;
 
+// membership webhook function
 async function membershipWebhook(req, res) {
   const sig = req.headers["stripe-signature"];
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    event = stripe.webhooks.constructEvent(req.body, sig, membershipSecret);
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       const transaction = await TransactionModel.findOne({
@@ -58,12 +60,12 @@ async function membershipWebhook(req, res) {
   }
 }
 
+// credit webhook function
 async function creditWebhook(req, res) {
   const sig = req.headers["stripe-signature"];
-  const endpointSecret = process.env.WEBHOOK_SECRET;
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    event = stripe.webhooks.constructEvent(req.body, sig, creditSecret);
     const session = event.data.object;
     const transaction = await TransactionModel.findOne({
       transactionId: session.id,
