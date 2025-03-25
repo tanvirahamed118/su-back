@@ -112,6 +112,7 @@ async function createCreditsPayment(req, res) {
   const successUrl = `${baseURL}/seller-dashboard/seller-credit/payment-success`;
   const failedUrl = `${baseURL}/seller-dashboard/seller-credit/payment-fail`;
   const existSeller = await SellerModel.findOne({ _id: sellerId });
+
   const { username, email } = existSeller || {};
   try {
     const existingCustomer = await stripe.customers.list({ email });
@@ -123,7 +124,7 @@ async function createCreditsPayment(req, res) {
     }
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card", "twint", "apple_pay"],
+      payment_method_types: ["card", "twint"],
       customer: customer.id,
       line_items: [
         {
@@ -131,9 +132,9 @@ async function createCreditsPayment(req, res) {
             currency: "CHF",
             product_data: {
               name: `${credits} Credit`,
-              description: `Willkommen auf der Stripe-Checkout-Seite. Sie kaufen ${credits} Credits für CHF ${price}. Anschließend werden Sie auf die Seite mit den erfolgreichen Kaufabwicklungen weitergeleitet. Vielen Dank.`,
+              description: `You are purchasing ${credits} Credits for CHF ${price}.`,
             },
-            unit_amount: price * 100,
+            unit_amount: price * 100, // Ensure price is in cents
           },
           quantity: 1,
         },
