@@ -11,7 +11,7 @@ const {
   INVALID_PLAN_MESSAGE,
 } = require("../utils/response");
 const priceMapping = {
-  oneMonth: process.env.PRICING_ID_ONE, // Replace with actual Price ID
+  oneMonth: process.env.PRICING_ID_ONE,
   threeMonth: process.env.PRICING_ID_TOW,
   sixMonth: process.env.PRICING_ID_THREE,
   oneYear: process.env.PRICING_ID_FOUR,
@@ -44,7 +44,7 @@ async function getSinglePayment(req, res) {
 
 // create membership payment
 async function createMembershipPayment(req, res) {
-  const { title, _id, currentPrice, plan } = req.body;
+  const { _id, currentPrice, plan } = req.body;
   const item = req.body;
   const { id } = req.params;
   const successUrl = `${baseURL}/seller-dashboard/payment-success`;
@@ -52,7 +52,6 @@ async function createMembershipPayment(req, res) {
   try {
     const existSeller = await SellerModel.findOne({ _id: id });
     const { memberShip, username, email } = existSeller || {};
-
     if (memberShip) {
       return res
         .status(400)
@@ -68,16 +67,14 @@ async function createMembershipPayment(req, res) {
       await SellerModel.findByIdAndUpdate(id, updateMembership, { new: true });
       return res.status(200).json({ pageUrl: successUrl });
     }
-
     const priceId = priceMapping[plan];
     if (!priceId) {
       return res.status(404).json({ message: INVALID_PLAN_MESSAGE });
     }
-
     const existingCustomer = await stripe.customers.list({ email });
     let customer;
     if (existingCustomer.data.length > 0) {
-      customer = existingCustomer.data[0]; // Use existing customer
+      customer = existingCustomer.data[0];
     } else {
       customer = await stripe.customers.create({ email, name: username });
     }
@@ -120,7 +117,7 @@ async function createCreditsPayment(req, res) {
     const existingCustomer = await stripe.customers.list({ email });
     let customer;
     if (existingCustomer.data.length > 0) {
-      customer = existingCustomer.data[0]; // Use existing customer
+      customer = existingCustomer.data[0];
     } else {
       customer = await stripe.customers.create({ email, name: username });
     }
@@ -135,7 +132,6 @@ async function createCreditsPayment(req, res) {
             product_data: {
               name: `${credits} Credit`,
               description: `Willkommen auf der Stripe-Checkout-Seite. Sie kaufen ${credits} Credits für CHF ${price}. Anschließend werden Sie auf die Seite mit den erfolgreichen Kaufabwicklungen weitergeleitet. Vielen Dank.`,
-              images: [`${process.env.IMAGE_URL}`],
             },
             unit_amount: price * 100,
           },
