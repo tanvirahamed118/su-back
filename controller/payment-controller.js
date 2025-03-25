@@ -8,7 +8,14 @@ const {
   DATA_NOT_FOUND_MESSAGE,
   MEMBERSHIP_ALREADY_CREATE_MESSAGE,
   DELETE_SUCCESS_MESSAGE,
+  INVALID_PLAN_MESSAGE,
 } = require("../utils/response");
+const priceMapping = {
+  oneMonth: process.env.PRICING_ID_ONE, // Replace with actual Price ID
+  threeMonth: process.env.PRICING_ID_TOW,
+  sixMonth: process.env.PRICING_ID_THREE,
+  oneYear: process.env.PRICING_ID_FOUR,
+};
 
 // Get all payment
 async function getAllPayment(req, res) {
@@ -37,7 +44,7 @@ async function getSinglePayment(req, res) {
 
 // create membership payment
 async function createMembershipPayment(req, res) {
-  const { title, _id, currentPrice } = req.body;
+  const { title, _id, currentPrice, plan } = req.body;
   const item = req.body;
   const { id } = req.params;
   const successUrl = `${baseURL}/seller-dashboard/payment-success`;
@@ -51,7 +58,7 @@ async function createMembershipPayment(req, res) {
         .status(400)
         .json({ message: MEMBERSHIP_ALREADY_CREATE_MESSAGE });
     }
-    if (item?.plan === "free") {
+    if (item?.plan === "free-plan") {
       const updateMembership = {
         memberShip: item,
         credits: item?.credit,
@@ -61,6 +68,12 @@ async function createMembershipPayment(req, res) {
       await SellerModel.findByIdAndUpdate(id, updateMembership, { new: true });
       return res.status(200).json({ pageUrl: successUrl });
     }
+
+    const priceId = priceMapping[plan];
+    if (!priceId) {
+      return res.status(404).json({ message: INVALID_PLAN_MESSAGE });
+    }
+
     const existingCustomer = await stripe.customers.list({ email });
     let customer;
     if (existingCustomer.data.length > 0) {
@@ -70,30 +83,14 @@ async function createMembershipPayment(req, res) {
     }
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
+      mode: "subscription",
       customer: customer.id,
-      line_items: [
-        {
-          price_data: {
-            currency: "CHF",
-            product_data: {
-              name: title,
-              description: `Willkommen auf der Stripe-Checkout-Seite. Sie kaufen einen ${title} und der Planpreis beträgt ${currentPrice}. Nach der Zahlung werden Sie zur erfolgreichen Seite weitergeleitet. Vielen Dank`,
-              images: [`${process.env.IMAGE_URL}`],
-            },
-            unit_amount: currentPrice * 100,
-          },
-          quantity: 1,
-        },
-      ],
-      mode: "payment",
-      invoice_creation: { enabled: true },
+      line_items: [{ price: priceId, quantity: 1 }],
       success_url: successUrl,
       cancel_url: failedUrl,
-      metadata: {
-        sellerId: id,
-        planId: _id,
-      },
+      metadata: { sellerId: id, planId: _id },
     });
+
     await TransactionModel.create({
       transactionId: session.id,
       sellerId: id,
@@ -129,7 +126,7 @@ async function createCreditsPayment(req, res) {
     }
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
+      payment_method_types: ["card", "twint", "apple_pay"],
       customer: customer.id,
       line_items: [
         {

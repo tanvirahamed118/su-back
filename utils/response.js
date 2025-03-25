@@ -65,6 +65,7 @@ const response = {
   CORS_ERROR_MESSAGE: "not allowed by cors",
   ROUTE_NOT_FOUND_MESSAGE: "route not found!",
   HOME_ROUTE_MESSAGE: "home route",
+  INVALID_PLAN_MESSAGE: "Invalid plan selected",
 };
 
 module.exports = response;

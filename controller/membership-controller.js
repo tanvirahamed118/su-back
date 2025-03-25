@@ -8,6 +8,24 @@ const {
   DATA_NOT_FOUND_MESSAGE,
   DELETE_SUCCESS_MESSAGE,
 } = require("../utils/response");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const EMAIL = process.env.EMAIL;
+const PASSWORD = process.env.PASSWORD;
+const nodemailer = require("nodemailer");
+const Mailgen = require("mailgen");
+const {
+  NAME_RESPONSE,
+  DOMAIN_URL_RESPONSE,
+  OUTRO_RESPONSE,
+  PAYMENT_HAS_COMPLETE_RESPONSE,
+  SINGNATURE_RESPONSE,
+  MESSAGE_RESPONSE,
+  LOGIN_TO_REPLY_MESSAGE_RESPONSE,
+  PAYMENT_SUBJECT_RESPONSE,
+} = require("../utils/email.response");
+const supportMail = process.env.SUPPORT_MAIL;
+const supportPhone = process.env.SUPPORT_PHONE;
+const corsUrl = process.env.CORS_URL;
 
 // get one Membership
 async function getOneMembership(req, res) {
@@ -74,6 +92,7 @@ async function createMembership(req, res) {
     credit,
     plan,
     status,
+    planTime,
   } = req.body;
   try {
     const createData = new MembershipModel({
@@ -90,6 +109,7 @@ async function createMembership(req, res) {
       credit,
       plan,
       status,
+      planTime,
     });
     await createData.save();
     res.status(200).json({ message: MEMBERSHIP_CREATE_SUCCESS_MESSAGE });
@@ -101,19 +121,38 @@ async function createMembership(req, res) {
 // cancel Membership
 async function cancelMembership(req, res) {
   const { id } = req.params;
-  const existSeller = await SellerModel.findOne({ _id: id });
   try {
-    if (existSeller) {
-      const updateSeller = {
-        $unset: { memberShip: "" },
-        memberShipStatus: "cancel",
-        credits: 0,
-      };
-      await SellerModel.findByIdAndUpdate(id, updateSeller, {
-        new: true,
-      });
-      res.status(200).json({ message: MEMBERSHIP_CANCEL_SUCCESS_MESSAGE });
+    const existSeller = await SellerModel.findOne({ _id: id });
+    if (!existSeller) {
+      return res.status(404).json({ message: "Seller not found" });
     }
+    const { email, username } = existSeller;
+    const customers = await stripe.customers.list({ email });
+    if (customers.data.length === 0) {
+      return res.status(400).json({ message: "Stripe customer not found" });
+    }
+    const customerId = customers.data[0].id;
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "active",
+    });
+    if (subscriptions.data.length === 0) {
+      return res.status(400).json({ message: "No active subscription found" });
+    }
+    await stripe.subscriptions.cancel(subscriptions.data[0].id);
+    const updateSeller = {
+      $unset: { memberShip: "" },
+      memberShipStatus: "canceled",
+      credits: 0,
+      membershipActive: "",
+    };
+    await sendEmailNotification(
+      username,
+      email,
+      `Leider wurde Ihre Mitgliedschaft gekündigt. Bei Fragen wenden Sie sich bitte an unser Support-Team.`
+    );
+    await SellerModel.findByIdAndUpdate(id, updateSeller, { new: true });
+    res.status(200).json({ message: MEMBERSHIP_CANCEL_SUCCESS_MESSAGE });
   } catch (error) {
     res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
@@ -134,6 +173,8 @@ async function updateMembership(req, res) {
     featureFour,
     featureFive,
     status,
+    planTime,
+    plan,
   } = req.body;
   try {
     const existMembership = await MembershipModel.findOne({ _id: id });
@@ -150,6 +191,8 @@ async function updateMembership(req, res) {
         featureFour,
         featureFive,
         status,
+        planTime,
+        plan,
       };
       await MembershipModel.findByIdAndUpdate(id, updateData, {
         new: true,
@@ -178,6 +221,51 @@ async function deleteMembership(req, res) {
   } catch (error) {
     res.status(500).json({ message: SERVER_ERROR_MESSAGE, error });
   }
+}
+
+// send mail notification
+async function sendEmailNotification(name, email, message) {
+  const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+      user: EMAIL,
+      pass: PASSWORD,
+    },
+  });
+  const mailGenerator = new Mailgen({
+    theme: "default",
+    product: {
+      name: NAME_RESPONSE,
+      link: DOMAIN_URL_RESPONSE,
+      copyright: OUTRO_RESPONSE,
+    },
+  });
+  const emailTemplate = {
+    body: {
+      name: `${name}`,
+      intro: `${PAYMENT_HAS_COMPLETE_RESPONSE}`,
+      signature: SINGNATURE_RESPONSE,
+      outro: `
+        <div style="border-top: 1px solid #ddd; margin: 20px 0; padding-top: 10px;">
+          <strong style="font-size: 16px;">${MESSAGE_RESPONSE}:</strong>
+          <p style="font-size: 14px; color: #555;">${message}</p>
+        </div>
+        <p style="font-size: 14px; color: #777;">${LOGIN_TO_REPLY_MESSAGE_RESPONSE}</p>
+        <p style="font-size: 14px; color: #4285F4;"><a href="${corsUrl}">${NAME_RESPONSE}</a></p>
+        <p style="font-size: 14px; color: #4285F4;">E-mail: ${supportMail}</p>
+        <p style="font-size: 14px; color: #777;">Tel: ${supportPhone}</p>
+      `,
+    },
+  };
+  emailTemplate.body.message = `${message}`;
+  const emailBody = mailGenerator.generate(emailTemplate);
+  const mailOptions = {
+    from: EMAIL,
+    to: email,
+    subject: PAYMENT_SUBJECT_RESPONSE,
+    html: emailBody,
+  };
+  await transporter.sendMail(mailOptions);
 }
 
 module.exports = {

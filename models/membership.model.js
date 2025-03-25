@@ -44,6 +44,13 @@ const membershipSchema = mongoose.Schema(
     status: {
       type: String,
     },
+    activeDate: {
+      type: String,
+    },
+    planTime: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

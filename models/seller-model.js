@@ -159,6 +159,9 @@ const sellerSchema = mongoose.Schema(
     newsletter: {
       type: Boolean,
     },
+    membershipActive: {
+      type: String,
+    },
   },
   { timestamps: true }
 );
